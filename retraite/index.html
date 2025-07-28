@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Planificateur Retraite</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>📊 Planificateur Retraite</h1>
+            <p>Optimisez votre stratégie de retraite en quelques clics</p>
+        </div>
+
+        <div class="tabs">
+            <button class="tab active" onclick="switchTab('client-info')">👥 Informations Client</button>
+            <button class="tab" onclick="switchTab('finances')">💰 Situation Financière</button>
+            <button class="tab" onclick="switchTab('simulation')">💸 Gestion des Sorties</button>
+        </div>
+
+        <!-- Onglet 1: Informations Client -->
+        <div id="client-info" class="tab-content active">
+            <div class="couple-toggle">
+                <span>Personne seule</span>
+                <label class="toggle-switch">
+                    <input type="checkbox" id="coupleToggle" onchange="toggleCouple()">
+                    <span class="slider"></span>
+                </label>
+                <span>Couple</span>
+            </div>
+
+            <div class="client-sections" id="clientSections">
+                <div class="client-section">
+                    <h4>👤 Client Principal</h4>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="nom1">Nom</label>
+                            <input type="text" id="nom1" placeholder="Nom de famille">
+                        </div>
+                        <div class="form-group">
+                            <label for="prenom1">Prénom</label>
+                            <input type="text" id="prenom1" placeholder="Prénom">
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="age1">Âge actuel</label>
+                            <input type="number" id="age1" min="18" max="100" placeholder="35">
+                        </div>
+                        <div class="form-group">
+                            <label for="dateRetraite1">Date de départ à la retraite</label>
+                            <input type="date" id="dateRetraite1">
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="revenus1">Revenus nets actuels (€/mois)</label>
+                            <input type="number" id="revenus1" placeholder="3500" class="euro">
+                        </div>
+                        <div class="form-group">
+                            <label for="revenusRetraite1">Revenus nets prévus à la retraite (€/mois)</label>
+                            <input type="number" id="revenusRetraite1" placeholder="2100" class="euro">
+                        </div>
+                    </div>
+                    <div id="tempsRestant1" class="warning-box" style="display: none;">
+                        <strong>⏰ Temps restant avant la retraite : </strong><span id="dureeRetraite1"></span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Onglet 2: Situation Financière -->
+        <div id="finances" class="tab-content">
+            <div class="form-section">
+                <h3>💳 Situation Financière Actuelle</h3>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="liquidites">Liquidités disponibles (€)</label>
+                        <input type="number" id="liquidites" placeholder="25000" class="euro">
+                    </div>
+                    <div class="form-group">
+                        <label for="parts">Nombre de parts fiscales</label>
+                        <input type="number" id="parts" step="0.5" placeholder="2.5">
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="revenusAutres">Autres revenus (fonciers, etc.) €/mois</label>
+                        <input type="number" id="revenusAutres" placeholder="800" class="euro">
+                    </div>
+                </div>
+            </div>
+
+            <div class="form-section">
+                <h3>📊 Charges Mensuelles</h3>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="trainVie">Train de vie (€/mois)</label>
+                        <input type="number" id="trainVie" placeholder="2800" class="euro">
+                    </div>
+                    <div class="form-group">
+                        <label for="impotInfo">Impôts (calculés automatiquement)</label>
+                        <input type="text" value="Calcul automatique basé sur vos revenus" readonly style="background: #f8f9fa; font-style: italic;">
+                    </div>
+                </div>
+                
+                <div id="credits-section">
+                    <h4>🏠 Crédits en cours</h4>
+                    <div id="creditsList">
+                        <div class="contract-item">
+                            <div class="form-group">
+                                <label>Type de crédit</label>
+                                <select>
+                                    <option>Immobilier</option>
+                                    <option>Consommation</option>
+                                    <option>Auto</option>
+                                    <option>Autre</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label>Mensualité (€)</label>
+                                <input type="number" placeholder="1200" class="euro">
+                            </div>
+                            <div class="form-group">
+                                <label>Date de fin</label>
+                                <input type="date">
+                            </div>
+                        </div>
+                    </div>
+                    <button class="add-contract-btn" onclick="addCredit()">➕ Ajouter un crédit</button>
+                </div>
+
+                <button class="calculate-btn" onclick="calculateBudget()">🧮 Calculer le déficit retraite</button>
+                <div id="budgetResult" class="result-box">
+                    <h4>💡 Analyse Budgétaire</h4>
+                    <p id="deficitText"></p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Onglet 3: Gestion des Sorties -->
+        <div id="simulation" class="tab-content">
+            <div class="form-section">
+                <h3>💼 Gestion des Contrats et Sorties</h3>
+                <p style="background: #e8f4fd; padding: 15px; border-radius: 8px; margin-bottom: 20px;">
+                    <strong>💡 Objectif :</strong> Calculez les frais de sortie de vos contrats pour combler le déficit identifié dans l'onglet précédent.
+                </p>
+                
+                <div id="deficitRecap" style="background: #fff3cd; padding: 15px; border-radius: 8px; margin-bottom: 25px; display: none;">
+                    <h5 style="color: #856404; margin-bottom: 10px;">🎯 Rappel du Déficit à Combler</h5>
+                    <p id="deficitAmount" style="margin: 0; font-size: 1.1em;"></p>
+                </div>
+                
+                <div class="contracts-management">
+                    <h4 style="color: #2c3e50; margin-bottom: 20px;">📋 Contrats Financiers Détaillés</h4>
+                    <div id="contractsManagementList">
+                        <div class="contract-management-item">
+                            <div class="contract-header">
+                                <div class="form-group">
+                                    <label>Nom du contrat</label>
+                                    <input type="text" placeholder="Ex: AV Crédit Agricole - Predica" style="font-weight: 600;">
+                                </div>
+                                <div class="form-group">
+                                    <label>Type</label>
+                                    <select onchange="updateContractType(this)">
+                                        <option>Assurance Vie</option>
+                                        <option>PER</option>
+                                        <option>Capitalisation</option>
+                                        <option>FCPI</option>
+                                        <option>SCPI</option>
+                                        <option>Actions</option>
+                                        <option>Autre</option>
+                                    </select>
+                                </div>
+                                <div class="form-group">
+                                    <label>Montant (€)</label>
+                                    <input type="number" placeholder="85000" class="euro" onchange="updateContractCalculations(this)">
+                                </div>
+                            </div>
+                            
+                            <div class="contract-details">
+                                <h6 style="color: #495057; margin-bottom: 15px;">🧾 Fiscalité et Sortie</h6>
+                                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 15px; margin-bottom: 15px;">
+                                    <div class="form-group">
+                                        <label>IR sur plus-values (%)</label>
+                                        <input type="number" step="0.1" placeholder="12.8" class="percentage" onchange="updateContractCalculations(this)">
+                                    </div>
+                                    <div class="form-group">
+                                        <label>Prélèvements Sociaux (%)</label>
+                                        <input type="number" step="0.1" placeholder="17.2" class="percentage" onchange="updateContractCalculations(this)">
+                                    </div>
+                                    <div class="form-group">
+                                        <label>Exonération IR</label>
+                                        <select onchange="toggleIRExemption(this)">
+                                            <option value="non">Non</option>
+                                            <option value="oui">Oui (>8 ans, etc.)</option>
+                                        </select>
+                                    </div>
+                                    <div class="form-group">
+                                        <label>Exonération PS</label>
+                                        <select onchange="updateContractCalculations(this)">
+                                            <option value="non">Non</option>
+                                            <option value="oui">Oui</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                
+                                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 15px; margin-bottom: 15px;">
+                                    <div class="form-group">
+                                        <label>Plus-value estimée (€)</label>
+                                        <input type="number" placeholder="15000" class="euro" onchange="updateContractCalculations(this)">
+                                    </div>
+                                    <div class="form-group">
+                                        <label>Type de sortie</label>
+                                        <select>
+                                            <option>Capital</option>
+                                            <option>Rente</option>
+                                            <option>Mixte</option>
+                                        </select>
+                                    </div>
+                                    <div class="form-group">
+                                        <label style="font-weight: bold; color: #d63384;">Sortir ce contrat ?</label>
+                                        <select onchange="toggleContractExit(this)" style="border: 2px solid #d63384;">
+                                            <option value="non">❌ Non</option>
+                                            <option value="oui">✅ Oui</option>
+                                        </select>
+                                    </div>
+                                    <div class="contract-fees" style="background: #f8f9fa; padding: 10px; border-radius: 6px; text-align: center;">
+                                        <small style="color: #6c757d;">Frais de sortie</small><br>
+                                        <strong class="fees-amount" style="color: #dc3545;">0 €</strong>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <button class="add-contract-btn" onclick="addManagementContract()">➕ Ajouter un contrat</button>
+                </div>
+                
+                <div style="margin-top: 30px;">
+                    <button class="calculate-btn" onclick="calculateExitFees()">💰 Calculer les frais totaux de sortie</button>
+                    
+                    <div id="exitFeesResult" class="result-box">
+                        <h4>💸 Estimation des Frais de Sortie</h4>
+                        <div id="feesBreakdown"></div>
+                        <div id="netAmountAvailable"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="main.js"></script>
+</body>
+</html>
