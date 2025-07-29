@@ -343,6 +343,233 @@ input:checked + .slider:before {
     border-bottom-color: #d63384;
 }
 
+/* NOUVEAUX STYLES POUR L'ONGLET PROJECTION */
+
+/* Styles pour le tableau de projection */
+.projection-table {
+    width: 100%;
+    border-collapse: collapse;
+    background: white;
+    border-radius: 10px;
+    overflow: hidden;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+    margin: 20px 0;
+}
+
+.projection-table th {
+    background: linear-gradient(45deg, #667eea, #764ba2);
+    color: white;
+    padding: 15px 10px;
+    text-align: center;
+    font-weight: 600;
+    font-size: 0.95em;
+}
+
+.projection-table td {
+    padding: 12px 10px;
+    text-align: center;
+    border-bottom: 1px solid #e9ecef;
+    font-size: 0.9em;
+}
+
+.projection-table tbody tr:hover {
+    background: #f8f9fa;
+}
+
+.projection-table tbody tr:nth-child(even) {
+    background: #fafafa;
+}
+
+/* Couleurs selon les niveaux de capital */
+.capital-high {
+    background: #e8f5e8 !important;
+    color: #2e7d32;
+    font-weight: 600;
+}
+
+.capital-medium {
+    background: #fff3e0 !important;
+    color: #f57c00;
+    font-weight: 600;
+}
+
+.capital-low {
+    background: #ffebee !important;
+    color: #c62828;
+    font-weight: 600;
+}
+
+.capital-depleted {
+    background: #f3e5f5 !important;
+    color: #7b1fa2;
+    font-weight: 600;
+    font-style: italic;
+}
+
+/* Styles pour les alertes de stratégie */
+.strategy-alert {
+    padding: 20px;
+    border-radius: 10px;
+    margin: 15px 0;
+    border-left: 5px solid;
+}
+
+.strategy-alert.success {
+    background: #e8f5e8;
+    border-color: #4caf50;
+    color: #2e7d32;
+}
+
+.strategy-alert.warning {
+    background: #fff3cd;
+    border-color: #ffc107;
+    color: #856404;
+}
+
+.strategy-alert.danger {
+    background: #ffebee;
+    border-color: #f44336;
+    color: #c62828;
+}
+
+.strategy-alert.info {
+    background: #e3f2fd;
+    border-color: #2196f3;
+    color: #1565c0;
+}
+
+/* Styles pour les recommandations */
+.recommendation-item {
+    background: white;
+    border: 2px solid #e9ecef;
+    border-radius: 10px;
+    padding: 20px;
+    margin: 15px 0;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+}
+
+.recommendation-item.priority-high {
+    border-color: #f44336;
+    background: #ffebee;
+}
+
+.recommendation-item.priority-medium {
+    border-color: #ff9800;
+    background: #fff3e0;
+}
+
+.recommendation-item.priority-low {
+    border-color: #4caf50;
+    background: #e8f5e8;
+}
+
+/* Animation pour le chargement du tableau */
+@keyframes tableLoad {
+    from { 
+        opacity: 0; 
+        transform: translateY(20px); 
+    }
+    to { 
+        opacity: 1; 
+        transform: translateY(0); 
+    }
+}
+
+.projection-table {
+    animation: tableLoad 0.5s ease-out;
+}
+
+/* Styles pour les cartes de récapitulatif */
+.recap-card {
+    background: white;
+    border-radius: 12px;
+    padding: 20px;
+    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+    border-left: 5px solid;
+    transition: transform 0.2s ease;
+}
+
+.recap-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 16px rgba(0,0,0,0.15);
+}
+
+.recap-card.deficit {
+    border-color: #f44336;
+}
+
+.recap-card.capital {
+    border-color: #4caf50;
+}
+
+.recap-card.rente {
+    border-color: #ff9800;
+}
+
+/* Styles pour les indicateurs de performance */
+.performance-indicator {
+    display: inline-block;
+    padding: 4px 12px;
+    border-radius: 20px;
+    font-size: 0.85em;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.performance-indicator.excellent {
+    background: #e8f5e8;
+    color: #2e7d32;
+}
+
+.performance-indicator.good {
+    background: #e3f2fd;
+    color: #1565c0;
+}
+
+.performance-indicator.warning {
+    background: #fff3e0;
+    color: #f57c00;
+}
+
+.performance-indicator.danger {
+    background: #ffebee;
+    color: #c62828;
+}
+
+/* Responsive pour les tableaux et onglet projection */
+@media (max-width: 768px) {
+    .projection-table {
+        font-size: 0.8em;
+    }
+    
+    .projection-table th,
+    .projection-table td {
+        padding: 8px 5px;
+    }
+    
+    #dataRecap {
+        grid-template-columns: 1fr;
+    }
+    
+    .contract-header {
+        grid-template-columns: 1fr;
+    }
+    
+    .contract-details > div {
+        grid-template-columns: 1fr;
+    }
+    
+    .tabs {
+        flex-wrap: wrap;
+    }
+    
+    .tab {
+        flex: 1 1 50%;
+        min-width: 150px;
+    }
+}
+
 /* Responsive pour la gestion des contrats */
 @media (max-width: 768px) {
     .contract-header {
