@@ -17,6 +17,7 @@
             <button class="tab active" onclick="switchTab('client-info')">👥 Informations Client</button>
             <button class="tab" onclick="switchTab('finances')">💰 Situation Financière</button>
             <button class="tab" onclick="switchTab('simulation')">💸 Gestion des Sorties</button>
+            <button class="tab" onclick="switchTab('projection')">📊 Projection & Stratégie</button>
         </div>
 
         <!-- Onglet 1: Informations Client -->
@@ -50,7 +51,7 @@
                         </div>
                         <div class="form-group">
                             <label for="dateRetraite1">Date de départ à la retraite</label>
-                            <input type="date" id="dateRetraite1">
+                            <input type="date" id="dateRetraite1" onchange="calculateTimeToRetirement(1)">
                         </div>
                     </div>
                     <div class="form-row">
@@ -213,7 +214,7 @@
                                     </div>
                                     <div class="form-group">
                                         <label>Type de sortie</label>
-                                        <select>
+                                        <select onchange="updateContractCalculations(this)">
                                             <option>Capital</option>
                                             <option>Rente</option>
                                             <option>Mixte</option>
@@ -245,6 +246,74 @@
                         <div id="feesBreakdown"></div>
                         <div id="netAmountAvailable"></div>
                     </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Onglet 4: Projection & Stratégie -->
+        <div id="projection" class="tab-content">
+            <div class="form-section">
+                <h3>🎯 Stratégie de Comblement du Déficit</h3>
+                <p style="background: #e8f4fd; padding: 15px; border-radius: 8px; margin-bottom: 20px;">
+                    <strong>💡 Objectif :</strong> Utilisez l'argent récupéré des contrats pour combler le déficit mensuel identifié. 
+                    Les contrats sortis en rente sont prioritaires, les capitaux servent de complément ou de replacement.
+                </p>
+                
+                <!-- Récapitulatif des données précédentes -->
+                <div id="dataRecap" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 20px; margin-bottom: 30px;">
+                    <div style="background: #ffebee; padding: 20px; border-radius: 10px; border-left: 5px solid #f44336;">
+                        <h5 style="color: #c62828; margin-bottom: 10px;">🎯 Déficit à Combler</h5>
+                        <div id="deficitProjection" style="font-size: 1.3em; font-weight: bold; color: #d32f2f;">
+                            Calculez d'abord votre déficit dans l'onglet "Situation Financière"
+                        </div>
+                    </div>
+                    <div style="background: #e8f5e8; padding: 20px; border-radius: 10px; border-left: 5px solid #4caf50;">
+                        <h5 style="color: #2e7d32; margin-bottom: 10px;">💰 Capital Disponible</h5>
+                        <div id="capitalProjection" style="font-size: 1.3em; font-weight: bold; color: #388e3c;">
+                            Simulez vos sorties dans l'onglet "Gestion des Sorties"
+                        </div>
+                    </div>
+                    <div style="background: #fff3e0; padding: 20px; border-radius: 10px; border-left: 5px solid #ff9800;">
+                        <h5 style="color: #f57c00; margin-bottom: 10px;">📈 Revenus de Rentes</h5>
+                        <div id="rentesProjection" style="font-size: 1.3em; font-weight: bold; color: #ef6c00;">
+                            0 € / mois
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Configuration de la stratégie -->
+                <div style="background: #f8f9fa; padding: 25px; border-radius: 10px; margin-bottom: 25px;">
+                    <h4 style="color: #2c3e50; margin-bottom: 20px;">⚙️ Paramètres de Projection</h4>
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px;">
+                        <div class="form-group">
+                            <label for="rendementReplacement">Rendement contrats de replacement (%/an)</label>
+                            <input type="number" id="rendementReplacement" step="0.1" value="3.5" placeholder="3.5">
+                        </div>
+                        <div class="form-group">
+                            <label for="inflationRate">Taux d'inflation (%/an)</label>
+                            <input type="number" id="inflationRate" step="0.1" value="2.0" placeholder="2.0">
+                        </div>
+                        <div class="form-group">
+                            <label for="ageEsperanceVie">Espérance de vie (années)</label>
+                            <input type="number" id="ageEsperanceVie" value="85" placeholder="85">
+                        </div>
+                    </div>
+                </div>
+
+                <button class="calculate-btn" onclick="calculateProjection()">🚀 Calculer la Projection</button>
+                
+                <!-- Résultats de la projection -->
+                <div id="projectionResult" class="result-box">
+                    <h4>📊 Projection de Comblement du Déficit</h4>
+                    
+                    <!-- Résumé de la stratégie -->
+                    <div id="strategyOverview" style="margin-bottom: 25px;"></div>
+                    
+                    <!-- Tableau de projection -->
+                    <div id="projectionTable" style="margin-bottom: 25px;"></div>
+                    
+                    <!-- Recommandations -->
+                    <div id="recommendations" style="margin-bottom: 25px;"></div>
                 </div>
             </div>
         </div>
