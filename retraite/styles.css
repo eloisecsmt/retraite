@@ -580,3 +580,146 @@ input:checked + .slider:before {
         grid-template-columns: 1fr;
     }
 }
+
+/* Styles pour les parts fiscales */
+.parts-fiscales-section {
+    background: white;
+    border: 2px solid #e9ecef;
+    border-radius: 12px;
+    padding: 20px;
+    margin-top: 15px;
+}
+
+.parts-total-display {
+    background: #e8f5e8;
+    border-radius: 8px;
+    padding: 15px;
+    margin-top: 15px;
+    text-align: center;
+    border: 2px solid #28a745;
+}
+
+/* Styles pour le mode toggle */
+.mode-toggle {
+    text-align: center;
+    margin-bottom: 25px;
+    padding: 15px;
+    background: #f8f9fa;
+    border-radius: 8px;
+}
+
+.mode-section {
+    margin-top: 20px;
+}
+
+.recap-revenus {
+    background: #e3f2fd;
+    border-radius: 10px;
+    padding: 20px;
+    border-left: 5px solid #2196f3;
+}
+
+.recap-field {
+    background: #f8f9fa !important;
+    font-weight: bold;
+    color: #495057;
+}
+
+/* Styles pour les revenus détaillés */
+.revenus-person-detail {
+    background: white;
+    border: 2px solid #dee2e6;
+    border-radius: 12px;
+    padding: 25px;
+    margin-bottom: 25px;
+}
+
+.revenus-category {
+    background: #f8f9fa;
+    border-radius: 8px;
+    padding: 20px;
+    margin-bottom: 20px;
+    border-left: 4px solid #667eea;
+}
+
+.frais-reels-zone {
+    background: #fff3cd;
+    border-radius: 8px;
+    padding: 15px;
+    margin-top: 15px;
+    border: 1px solid #ffc107;
+}
+
+.calcul-result {
+    background: #e8f5e8;
+    border-radius: 6px;
+    padding: 12px;
+    margin-top: 15px;
+    text-align: center;
+    border: 1px solid #28a745;
+}
+
+.toggle-section {
+    margin-bottom: 15px;
+}
+
+.toggle-section label {
+    display: flex;
+    align-items: center;
+    font-weight: 600;
+    color: #495057;
+}
+
+.toggle-section input[type="checkbox"] {
+    margin-right: 10px;
+    transform: scale(1.2);
+}
+
+/* Styles pour les revenus professionnels et fonciers */
+.revenus-pro-item, .bien-foncier-item {
+    background: white;
+    border: 2px solid #dee2e6;
+    border-radius: 10px;
+    padding: 20px;
+    margin-bottom: 15px;
+}
+
+.bien-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 15px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid #e9ecef;
+}
+
+.charges-pro-zone, .charges-foncier-zone {
+    background: #fff3cd;
+    border-radius: 8px;
+    padding: 15px;
+    margin-top: 15px;
+    border: 1px solid #ffc107;
+}
+
+.foncier-total {
+    background: #e8f5e8;
+    border-radius: 8px;
+    padding: 15px;
+    margin-top: 20px;
+    text-align: center;
+    border: 2px solid #28a745;
+}
+
+.remove-btn {
+    background: #dc3545;
+    color: white;
+    border: none;
+    padding: 5px 10px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 0.9em;
+}
+
+.remove-btn:hover {
+    background: #c82333;
+}
