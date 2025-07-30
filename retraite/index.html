@@ -10,7 +10,7 @@
     <div class="container">
         <div class="header">
             <h1>📊 Planificateur Retraite</h1>
-            <p>Optimisez votre stratégie de retraite</p>
+            <p>Optimisez votre stratégie de retraite en quelques clics</p>
         </div>
 
         <div class="tabs">
@@ -67,78 +67,327 @@
                     <div id="tempsRestant1" class="warning-box" style="display: none;">
                         <strong>⏰ Temps restant avant la retraite : </strong><span id="dureeRetraite1"></span>
                     </div>
+                    <div class="form-section">
+            <h3>🧾 Parts Fiscales</h3>
+            <div class="parts-fiscales-section">
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="partsEntieres">Parts entières</label>
+                        <select id="partsEntieres" onchange="updateTotalParts()">
+                            <option value="1">1 part (célibataire)</option>
+                            <option value="2" selected>2 parts (couple)</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="demiParts">Demi-parts supplémentaires</label>
+                        <select id="demiParts" onchange="updateTotalParts()">
+                            <option value="0">0 demi-part</option>
+                            <option value="0.5">0.5 (1 enfant ou invalide)</option>
+                            <option value="1">1 (2 enfants)</option>
+                            <option value="1.5">1.5 (3 enfants)</option>
+                            <option value="2">2 (4 enfants)</option>
+                            <option value="2.5">2.5 (5 enfants)</option>
+                            <option value="3">3 (6 enfants)</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="parts-total-display">
+                    <strong>Total parts fiscales : <span id="totalPartsDisplay">2</span></strong>
+                    <input type="hidden" id="parts" value="2">
+                </div>
+            </div>
+        </div>
                 </div>
             </div>
         </div>
 
-        <!-- Onglet 2: Situation Financière -->
-        <div id="finances" class="tab-content">
-            <div class="form-section">
-                <h3>💳 Situation Financière Actuelle</h3>
-                <div class="form-row">
-                    <div class="form-group">
-                        <label for="liquidites">Liquidités disponibles (€)</label>
-                        <input type="number" id="liquidites" placeholder="25000" class="euro">
-                    </div>
-                    <div class="form-group">
-                        <label for="parts">Nombre de parts fiscales</label>
-                        <input type="number" id="parts" step="0.5" placeholder="2.5">
-                    </div>
-                </div>
-                <div class="form-row">
-                    <div class="form-group">
-                        <label for="revenusAutres">Autres revenus (fonciers, etc.) €/mois</label>
-                        <input type="number" id="revenusAutres" placeholder="800" class="euro">
-                    </div>
-                </div>
-            </div>
-
-            <div class="form-section">
-                <h3>📊 Charges Mensuelles</h3>
-                <div class="form-row">
-                    <div class="form-group">
-                        <label for="trainVie">Train de vie (€/mois)</label>
-                        <input type="number" id="trainVie" placeholder="2800" class="euro">
-                    </div>
-                    <div class="form-group">
-                        <label for="impotInfo">Impôts (calculés automatiquement)</label>
-                        <input type="text" value="Calcul automatique basé sur vos revenus" readonly style="background: #f8f9fa; font-style: italic;">
-                    </div>
-                </div>
+                <!-- Onglet 2: Revenus et Situation Financière -->
+            <div id="finances" class="tab-content">
                 
-                <div id="credits-section">
-                    <h4>🏠 Crédits en cours</h4>
-                    <div id="creditsList">
-                        <div class="contract-item">
-                            <div class="form-group">
-                                <label>Type de crédit</label>
-                                <select>
-                                    <option>Immobilier</option>
-                                    <option>Consommation</option>
-                                    <option>Auto</option>
-                                    <option>Autre</option>
-                                </select>
-                            </div>
-                            <div class="form-group">
-                                <label>Mensualité (€)</label>
-                                <input type="number" placeholder="1200" class="euro">
-                            </div>
-                            <div class="form-group">
-                                <label>Date de fin</label>
-                                <input type="date">
+                <!-- SECTION 1: REVENUS DÉTAILLÉS -->
+                <div class="form-section">
+                    <h3>💰 Revenus Détaillés</h3>
+                    
+                    <!-- Toggle mode simple/détaillé -->
+                    <div class="mode-toggle">
+                        <label class="toggle-switch">
+                            <input type="checkbox" id="modeDetaille" onchange="toggleModeDetaille()">
+                            <span class="slider"></span>
+                        </label>
+                        <span>Mode détaillé (calcul fiscal précis)</span>
+                    </div>
+                    
+                    <!-- Mode simple (valeurs de l'onglet 1) -->
+                    <div id="modeSimple" class="mode-section">
+                        <div class="recap-revenus">
+                            <h4>📊 Récapitulatif (depuis onglet 1)</h4>
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label>Revenus nets actuels</label>
+                                    <input type="text" id="revenusNetsRecap" readonly class="recap-field">
+                                </div>
+                                <div class="form-group">
+                                    <label>Revenus nets retraite</label>
+                                    <input type="text" id="revenusRetraiteRecap" readonly class="recap-field">
+                                </div>
                             </div>
                         </div>
                     </div>
-                    <button class="add-contract-btn" onclick="addCredit()">➕ Ajouter un crédit</button>
+                    
+                    <!-- Mode détaillé -->
+                    <div id="modeDetailleSection" class="mode-section" style="display: none;">
+                        
+                        <!-- CLIENT PRINCIPAL -->
+                        <div class="revenus-person-detail">
+                            <h4>👤 Client Principal - Revenus Détaillés</h4>
+                            
+                            <!-- Revenus salariaux actuels -->
+                            <div class="revenus-category">
+                                <h5>🏢 Revenus Salariaux Actuels</h5>
+                                <div class="form-row">
+                                    <div class="form-group">
+                                        <label>Statut professionnel</label>
+                                        <select id="statutPro1" onchange="updateStatutPro(1)">
+                                            <option value="salarie">Salarié du privé</option>
+                                            <option value="fonctionnaire">Fonctionnaire</option>
+                                            <option value="retraite">Déjà retraité</option>
+                                        </select>
+                                    </div>
+                                    <div class="form-group">
+                                        <label>Salaire brut annuel (€)</label>
+                                        <input type="number" id="salaireBrut1" placeholder="45000" onchange="calculateSalaryDetails(1)">
+                                    </div>
+                                </div>
+                                
+                                <div class="form-row">
+                                    <div class="form-group">
+                                        <label>Déduction fiscale</label>
+                                        <select id="deductionType1" onchange="updateDeductionType(1)">
+                                            <option value="abattement">Abattement 10% (standard)</option>
+                                            <option value="frais-reels">Frais réels</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                
+                                <!-- Zone frais réels -->
+                                <div id="fraisReels1" class="frais-reels-zone" style="display: none;">
+                                    <h6>📝 Détail Frais Réels</h6>
+                                    <div class="form-row">
+                                        <div class="form-group">
+                                            <label>Frais transport (€/an)</label>
+                                            <input type="number" placeholder="2400" onchange="calculateSalaryDetails(1)">
+                                        </div>
+                                        <div class="form-group">
+                                            <label>Frais repas (€/an)</label>
+                                            <input type="number" placeholder="1800" onchange="calculateSalaryDetails(1)">
+                                        </div>
+                                    </div>
+                                    <div class="form-group">
+                                        <label>Autres frais professionnels (€/an)</label>
+                                        <input type="number" placeholder="500" onchange="calculateSalaryDetails(1)">
+                                    </div>
+                                </div>
+                                
+                                <div class="calcul-result">
+                                    <strong>Revenu net fiscal : <span id="revenuNetFiscal1">0 €</span></strong>
+                                </div>
+                            </div>
+                            
+                            <!-- Pensions retraite -->
+                            <div class="revenus-category">
+                                <h5>🏖️ Pensions de Retraite Prévues</h5>
+                                <div class="form-row">
+                                    <div class="form-group">
+                                        <label>Pension brute annuelle (€)</label>
+                                        <input type="number" id="pensionBrute1" placeholder="25000" onchange="calculatePensionDetails(1)">
+                                    </div>
+                                    <div class="form-group">
+                                        <label>Abattement pension</label>
+                                        <select id="abattementPension1" onchange="calculatePensionDetails(1)">
+                                            <option value="10">10% (standard)</option>
+                                            <option value="0">Aucun abattement</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                <div class="calcul-result">
+                                    <strong>Pension nette fiscale : <span id="pensionNetFiscale1">0 €</span></strong>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- CONJOINT -->
+                        <div id="conjoint-revenus-detail" class="revenus-person-detail" style="display: none;">
+                            <h4>👫 Conjoint - Revenus Détaillés</h4>
+                            
+                            <!-- Revenus salariaux actuels conjoint -->
+                            <div class="revenus-category">
+                                <h5>🏢 Revenus Salariaux Actuels</h5>
+                                <div class="form-row">
+                                    <div class="form-group">
+                                        <label>Statut professionnel</label>
+                                        <select id="statutPro2" onchange="updateStatutPro(2)">
+                                            <option value="salarie">Salarié du privé</option>
+                                            <option value="fonctionnaire">Fonctionnaire</option>
+                                            <option value="retraite">Déjà retraité</option>
+                                        </select>
+                                    </div>
+                                    <div class="form-group">
+                                        <label>Salaire brut annuel (€)</label>
+                                        <input type="number" id="salaireBrut2" placeholder="35000" onchange="calculateSalaryDetails(2)">
+                                    </div>
+                                </div>
+                                
+                                <div class="form-row">
+                                    <div class="form-group">
+                                        <label>Déduction fiscale</label>
+                                        <select id="deductionType2" onchange="updateDeductionType(2)">
+                                            <option value="abattement">Abattement 10% (standard)</option>
+                                            <option value="frais-reels">Frais réels</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                
+                                <!-- Zone frais réels conjoint -->
+                                <div id="fraisReels2" class="frais-reels-zone" style="display: none;">
+                                    <h6>📝 Détail Frais Réels</h6>
+                                    <div class="form-row">
+                                        <div class="form-group">
+                                            <label>Frais transport (€/an)</label>
+                                            <input type="number" placeholder="1800" onchange="calculateSalaryDetails(2)">
+                                        </div>
+                                        <div class="form-group">
+                                            <label>Frais repas (€/an)</label>
+                                            <input type="number" placeholder="1200" onchange="calculateSalaryDetails(2)">
+                                        </div>
+                                    </div>
+                                    <div class="form-group">
+                                        <label>Autres frais professionnels (€/an)</label>
+                                        <input type="number" placeholder="300" onchange="calculateSalaryDetails(2)">
+                                    </div>
+                                </div>
+                                
+                                <div class="calcul-result">
+                                    <strong>Revenu net fiscal : <span id="revenuNetFiscal2">0 €</span></strong>
+                                </div>
+                            </div>
+                            
+                            <!-- Pensions retraite conjoint -->
+                            <div class="revenus-category">
+                                <h5>🏖️ Pensions de Retraite Prévues</h5>
+                                <div class="form-row">
+                                    <div class="form-group">
+                                        <label>Pension brute annuelle (€)</label>
+                                        <input type="number" id="pensionBrute2" placeholder="18000" onchange="calculatePensionDetails(2)">
+                                    </div>
+                                    <div class="form-group">
+                                        <label>Abattement pension</label>
+                                        <select id="abattementPension2" onchange="calculatePensionDetails(2)">
+                                            <option value="10">10% (standard)</option>
+                                            <option value="0">Aucun abattement</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                <div class="calcul-result">
+                                    <strong>Pension nette fiscale : <span id="pensionNetFiscale2">0 €</span></strong>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- REVENUS PROFESSIONNELS NON-SALARIÉS -->
+                        <div class="revenus-category">
+                            <h5>💼 Revenus Professionnels Non-Salariés</h5>
+                            <div class="toggle-section">
+                                <label>
+                                    <input type="checkbox" id="hasRevenusPro" onchange="toggleRevenusPro()">
+                                    J'ai des revenus BNC, BIC ou BA
+                                </label>
+                            </div>
+                            <div id="revenusProDetail" style="display: none;">
+                                <!-- Section BNC/BIC détaillée - sera remplie par JavaScript -->
+                            </div>
+                        </div>
+                        
+                        <!-- REVENUS FONCIERS -->
+                        <div class="revenus-category">
+                            <h5>🏠 Revenus Fonciers</h5>
+                            <div class="toggle-section">
+                                <label>
+                                    <input type="checkbox" id="hasRevenusFoncier" onchange="toggleRevenusFoncier()">
+                                    J'ai des revenus fonciers
+                                </label>
+                            </div>
+                            <div id="revenusFoncierDetail" style="display: none;">
+                                <!-- Section foncier détaillée - sera remplie par JavaScript -->
+                            </div>
+                        </div>
+                    </div>
                 </div>
+                
+                <!-- SECTION 2: AUTRES REVENUS ET LIQUIDITÉS -->
+                <div class="form-section">
+                    <h3>💳 Autres Revenus et Liquidités</h3>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="revenusAutres">Autres revenus (€/mois)</label>
+                            <input type="number" id="revenusAutres" placeholder="800" class="euro">
+                            <small style="color: #6c757d;">Capitaux mobiliers, rentes, etc.</small>
+                        </div>
+                        <div class="form-group">
+                            <label for="liquidites">Liquidités disponibles (€)</label>
+                            <input type="number" id="liquidites" placeholder="25000" class="euro">
+                            <small style="color: #6c757d;">Épargne disponible immédiatement</small>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- SECTION 3: CHARGES MENSUELLES -->
+                <div class="form-section">
+                    <h3>📊 Charges Mensuelles</h3>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="trainVie">Train de vie (€/mois)</label>
+                            <input type="number" id="trainVie" placeholder="2800" class="euro">
+                            <small style="color: #6c757d;">Alimentation, loisirs, vêtements, assurances...</small>
+                        </div>
+                        <div class="form-group">
+                            <label for="impotInfo">Impôts (calculés automatiquement)</label>
+                            <input type="text" value="Calcul automatique basé sur vos revenus" readonly style="background: #f8f9fa; font-style: italic;">
+                        </div>
+                    </div>
+                    
+                    <div id="credits-section">
+                        <h4>🏠 Crédits en cours</h4>
+                        <div id="creditsList">
+                            <div class="contract-item">
+                                <div class="form-group">
+                                    <label>Type de crédit</label>
+                                    <select>
+                                        <option>Immobilier</option>
+                                        <option>Consommation</option>
+                                        <option>Auto</option>
+                                        <option>Autre</option>
+                                    </select>
+                                </div>
+                                <div class="form-group">
+                                    <label>Mensualité (€)</label>
+                                    <input type="number" placeholder="1200" class="euro">
+                                </div>
+                                <div class="form-group">
+                                    <label>Date de fin</label>
+                                    <input type="date">
+                                </div>
+                            </div>
+                        </div>
+                        <button class="add-contract-btn" onclick="addCredit()">➕ Ajouter un crédit</button>
+                    </div>
 
-                <button class="calculate-btn" onclick="calculateBudget()">🧮 Calculer le déficit retraite</button>
-                <div id="budgetResult" class="result-box">
-                    <h4>💡 Analyse Budgétaire</h4>
-                    <p id="deficitText"></p>
+                    <button class="calculate-btn" onclick="calculateBudgetWithDetails()">🧮 Calculer le déficit retraite</button>
+                    <div id="budgetResult" class="result-box">
+                        <h4>💡 Analyse Budgétaire</h4>
+                        <p id="deficitText"></p>
+                    </div>
                 </div>
             </div>
-        </div>
 
         <!-- Onglet 3: Gestion des Sorties -->
         <div id="simulation" class="tab-content">
