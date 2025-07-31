@@ -1482,7 +1482,9 @@ function calculateBudgetWithDetails() {
 
         document.getElementById('deficitText').innerHTML = resultText;
         document.getElementById('budgetResult').classList.add('show');
-        
+
+        window.projectionDataTemp = { deficitMensuel: deficitMensuel, deficitAnnuel: deficitAnnuel };
+
         console.log('✅ Calcul du budget terminé avec succès');
         
     } catch (error) {
@@ -2190,42 +2192,91 @@ function collectProjectionData() {
     console.log('=== COLLECTE DES DONNÉES POUR PROJECTION ===');
     
     try {
-        // Réinitialisation des données de projection
-        projectionData = {
-            deficitMensuel: 0,
-            deficitAnnuel: 0,
-            capitalDisponible: 0,
-            revenusRentes: 0,
-            economiesCredits: 0,
-            contractsRentes: [],
-            contractsCapital: [],
-            dateDebutRetraite: null
-        };
+        // Conserver les données existantes si elles existent
+        if (!projectionData) {
+            projectionData = {
+                deficitMensuel: 0,
+                deficitAnnuel: 0,
+                capitalDisponible: 0,
+                revenusRentes: 0,
+                economiesCredits: 0,
+                contractsRentes: [],
+                contractsCapital: [],
+                dateDebutRetraite: null
+            };
+        }
         
-        // 1. Récupération du déficit depuis l'onglet 2
-        const budgetResult = document.getElementById('budgetResult');
-        if (budgetResult && budgetResult.classList.contains('show')) {
-            const deficitText = document.getElementById('deficitText');
-            if (deficitText) {
-                const deficitHTML = deficitText.innerHTML;
-                const deficitMatch = deficitHTML.match(/(\d+[\d\s,]*)\s*€[\s\/]*mois/);
-                if (deficitMatch) {
-                    projectionData.deficitMensuel = parseInt(deficitMatch[1].replace(/[\s,]/g, ''));
-                    projectionData.deficitAnnuel = projectionData.deficitMensuel * 12;
+        // Réinitialiser seulement les données qui vont être recalculées
+        projectionData.capitalDisponible = 0;
+        projectionData.revenusRentes = 0;
+        projectionData.economiesCredits = 0;
+        projectionData.contractsRentes = [];
+        projectionData.contractsCapital = [];
+        if (!projectionData.dateDebutRetraite) {
+            projectionData.dateDebutRetraite = null;
+        }
+        
+        // 1. Récupération du déficit avec priorité à la variable temporaire
+        console.log('📊 1. Récupération du déficit...');
+        
+        if (typeof window.projectionDataTemp !== 'undefined' && window.projectionDataTemp.deficitMensuel > 0) {
+            projectionData.deficitMensuel = window.projectionDataTemp.deficitMensuel;
+            projectionData.deficitAnnuel = window.projectionDataTemp.deficitAnnuel;
+            console.log('✅ Déficit récupéré depuis variable temporaire:', projectionData.deficitMensuel);
+        }
+        else if (!projectionData.deficitMensuel || projectionData.deficitMensuel === 0) {
+            // Seulement si pas de déficit déjà calculé
+            const budgetResult = document.getElementById('budgetResult');
+            if (budgetResult && budgetResult.classList.contains('show')) {
+                const deficitText = document.getElementById('deficitText');
+                if (deficitText) {
+                    const deficitHTML = deficitText.innerHTML;
+                    console.log('🔍 HTML à analyser (premiers 200 chars):', deficitHTML.substring(0, 200));
+                    
+                    const deficitMatch = deficitHTML.match(/(\d+[\d\s,]*)\s*€[\s\/]*mois/);
+                    if (deficitMatch) {
+                        const montantCapture = parseInt(deficitMatch[1].replace(/[\s,]/g, ''));
+                        console.log('🔍 Premier montant capturé:', montantCapture);
+                        
+                        // Si le montant semble trop élevé (probablement un revenu), chercher le vrai déficit
+                        if (montantCapture > 2000) {
+                            console.log('⚠️ Montant > 2000€, recherche du déficit...');
+                            const allAmounts = deficitHTML.match(/(\d+[\d\s,]*)\s*€/g);
+                            if (allAmounts && allAmounts.length > 1) {
+                                const amounts = allAmounts.map(amount => parseInt(amount.replace(/[^\d]/g, '')));
+                                console.log('🔍 Tous les montants:', amounts);
+                                const deficitProbable = Math.min(...amounts.filter(amount => amount > 0 && amount < 5000));
+                                console.log('🔍 Déficit probable:', deficitProbable);
+                                projectionData.deficitMensuel = deficitProbable;
+                            } else {
+                                projectionData.deficitMensuel = montantCapture;
+                            }
+                        } else {
+                            projectionData.deficitMensuel = montantCapture;
+                        }
+                        
+                        projectionData.deficitAnnuel = projectionData.deficitMensuel * 12;
+                        console.log('✅ Déficit final:', projectionData.deficitMensuel);
+                    }
                 }
             }
+        } else {
+            console.log('✅ Déficit déjà présent:', projectionData.deficitMensuel);
         }
         
         // 2. Récupération des économies crédits
         projectionData.economiesCredits = calculateEconomiesMensuelles();
+        console.log('🏦 Économies crédits:', projectionData.economiesCredits);
         
         // 3. Récupération des contrats et capital depuis l'onglet 3
         const contractItems = document.querySelectorAll('.contract-management-item');
-        console.log(`Contrats trouvés: ${contractItems.length}`);
+        console.log(`💼 Contrats trouvés: ${contractItems.length}`);
         
         contractItems.forEach((item, index) => {
             const sortirSelect = item.querySelector('select[onchange*="toggleContract"]');
             const sortir = sortirSelect ? sortirSelect.value === 'oui' : false;
+            
+            console.log(`📋 Contrat ${index + 1} - À sortir: ${sortir}`);
             
             if (sortir) {
                 const nomInput = item.querySelector('.contract-header input[type="text"]');
@@ -2237,8 +2288,15 @@ function collectProjectionData() {
                 const typeSortie = typeSortieSelect ? typeSortieSelect.value : 'Capital';
                 
                 const feesDisplay = item.querySelector('.fees-amount');
-                const frais = feesDisplay ? parseInt(feesDisplay.textContent.replace(/[^\d]/g, '')) || 0 : 0;
-                const montantNet = montant - frais;
+                let frais = 0;
+                if (feesDisplay && feesDisplay.textContent) {
+                    const fraisText = feesDisplay.textContent.replace(/[^\d]/g, '');
+                    frais = fraisText ? parseInt(fraisText) : 0;
+                }
+                
+                const montantNet = Math.max(0, montant - frais);
+                
+                console.log(`💰 ${nom}: ${montant}€ - ${frais}€ frais = ${montantNet}€ net (${typeSortie})`);
                 
                 const contractData = {
                     nom,
@@ -2257,12 +2315,14 @@ function collectProjectionData() {
                     
                     projectionData.contractsRentes.push(contractData);
                     projectionData.revenusRentes += contractData.revenuMensuel;
+                    
+                    console.log(`📈 Rente ajoutée: ${revenuMensuel}€/mois`);
                 } else {
                     projectionData.contractsCapital.push(contractData);
                     projectionData.capitalDisponible += montantNet;
+                    
+                    console.log(`💵 Capital ajouté: ${montantNet}€`);
                 }
-                
-                console.log(`Contrat traité: ${nom}, Type: ${typeSortie}, Montant net: ${montantNet}`);
             }
         });
         
@@ -2281,12 +2341,19 @@ function collectProjectionData() {
             }
         }
         
-        console.log('Données collectées:', projectionData);
+        console.log('📊 RÉSUMÉ FINAL:');
+        console.log('  - Déficit mensuel:', projectionData.deficitMensuel, '€');
+        console.log('  - Capital disponible:', projectionData.capitalDisponible, '€');
+        console.log('  - Revenus rentes:', projectionData.revenusRentes, '€/mois');
+        console.log('  - Économies crédits:', projectionData.economiesCredits, '€/mois');
+        console.log('  - Contrats rentes:', projectionData.contractsRentes.length);
+        console.log('  - Contrats capital:', projectionData.contractsCapital.length);
+        
+        console.log('=== FIN COLLECTE DONNÉES PROJECTION ===');
         return projectionData;
         
     } catch (error) {
         console.error('❌ Erreur dans collectProjectionData:', error);
-        // Retourner des données par défaut en cas d'erreur
         return {
             deficitMensuel: 0,
             deficitAnnuel: 0,
