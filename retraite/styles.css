@@ -271,6 +271,36 @@ input:checked + .slider:before {
     align-items: center;
 }
 
+/* Styles spécifiques pour les crédits avec remboursement anticipé */
+.credit-item {
+    position: relative;
+}
+
+.credit-item.remboursement-selected {
+    border: 2px solid #e91e63;
+    background: #fce4ec;
+}
+
+.remboursement-anticipe-group {
+    border-left: 3px solid #e91e63;
+    padding-left: 10px;
+}
+
+.remboursement-details {
+    grid-column: 1 / -1;
+    margin-top: 10px;
+}
+
+.economie-mensuelle {
+    animation: pulse 1s ease-in-out;
+}
+
+@keyframes pulse {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.05); }
+    100% { transform: scale(1); }
+}
+
 .add-contract-btn {
     background: #28a745;
     color: white;
@@ -307,7 +337,7 @@ input:checked + .slider:before {
 
 .contract-header {
     display: grid;
-    grid-template-columns: 2fr 1fr 1fr;
+    grid-template-columns: 2fr 1fr 1fr 1fr;
     gap: 15px;
     margin-bottom: 20px;
     padding-bottom: 15px;
@@ -343,7 +373,31 @@ input:checked + .slider:before {
     border-bottom-color: #d63384;
 }
 
-/* NOUVEAUX STYLES POUR L'ONGLET PROJECTION */
+/* Styles pour les rentes viagères */
+.rente-details {
+    border-left: 4px solid #1565c0;
+}
+
+.rente-details .form-group label {
+    color: #1565c0;
+    font-weight: 600;
+}
+
+/* Styles pour les abattements AV */
+.av-abattement-info {
+    background: #e8f5e8;
+    padding: 10px;
+    border-radius: 6px;
+    margin-top: 10px;
+    border-left: 4px solid #4caf50;
+}
+
+.av-abattement-info small {
+    color: #2e7d32;
+    font-weight: 600;
+}
+
+/* STYLES POUR L'ONGLET PROJECTION */
 
 /* Styles pour le tableau de projection */
 .projection-table {
@@ -506,6 +560,10 @@ input:checked + .slider:before {
     border-color: #ff9800;
 }
 
+.recap-card.credit {
+    border-color: #03a9f4;
+}
+
 /* Styles pour les indicateurs de performance */
 .performance-indicator {
     display: inline-block;
@@ -535,50 +593,6 @@ input:checked + .slider:before {
 .performance-indicator.danger {
     background: #ffebee;
     color: #c62828;
-}
-
-/* Responsive pour les tableaux et onglet projection */
-@media (max-width: 768px) {
-    .projection-table {
-        font-size: 0.8em;
-    }
-    
-    .projection-table th,
-    .projection-table td {
-        padding: 8px 5px;
-    }
-    
-    #dataRecap {
-        grid-template-columns: 1fr;
-    }
-    
-    .contract-header {
-        grid-template-columns: 1fr;
-    }
-    
-    .contract-details > div {
-        grid-template-columns: 1fr;
-    }
-    
-    .tabs {
-        flex-wrap: wrap;
-    }
-    
-    .tab {
-        flex: 1 1 50%;
-        min-width: 150px;
-    }
-}
-
-/* Responsive pour la gestion des contrats */
-@media (max-width: 768px) {
-    .contract-header {
-        grid-template-columns: 1fr;
-    }
-    
-    .contract-details > div {
-        grid-template-columns: 1fr;
-    }
 }
 
 /* Styles pour les parts fiscales */
@@ -722,4 +736,56 @@ input:checked + .slider:before {
 
 .remove-btn:hover {
     background: #c82333;
+}
+
+/* Responsive pour les tableaux et onglet projection */
+@media (max-width: 768px) {
+    .projection-table {
+        font-size: 0.8em;
+    }
+    
+    .projection-table th,
+    .projection-table td {
+        padding: 8px 5px;
+    }
+    
+    #dataRecap {
+        grid-template-columns: 1fr;
+    }
+    
+    .contract-header {
+        grid-template-columns: 1fr;
+    }
+    
+    .contract-details > div {
+        grid-template-columns: 1fr;
+    }
+    
+    .tabs {
+        flex-wrap: wrap;
+    }
+    
+    .tab {
+        flex: 1 1 50%;
+        min-width: 150px;
+    }
+    
+    .form-row {
+        grid-template-columns: 1fr;
+    }
+    
+    .client-sections.couple {
+        grid-template-columns: 1fr;
+    }
+}
+
+/* Responsive pour la gestion des contrats */
+@media (max-width: 768px) {
+    .contract-header {
+        grid-template-columns: 1fr;
+    }
+    
+    .contract-details > div {
+        grid-template-columns: 1fr;
+    }
 }
