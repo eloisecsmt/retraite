@@ -50,14 +50,29 @@ const TAUX_IRA_DEFAUT = {
 
 // Variables globales pour la projection
 let projectionData = {
+    // Données de base (existant)
     deficitMensuel: 0,
     deficitAnnuel: 0,
-    capitalDisponible: 0,
-    revenusRentes: 0,
     economiesCredits: 0,
-    contractsRentes: [],
-    contractsCapital: [],
-    dateDebutRetraite: null
+    dateDebutRetraite: null,
+    
+    // Contrats par type de sortie
+    contratsRentes: [],           // Contrats → rente viagère  
+    contratsCapital: [],          // Tous les contrats capital
+    
+    // Nouvelle allocation intelligente du capital
+    contratsCapitalReinvesti: [], // Capital → nouveaux placements
+    contratsCapitalConsomme: [],  // Capital → prélèvements déficit
+    
+    // Flux calculés
+    revenusRentesTotaux: 0,       // Total rentes/mois
+    deficitApresRentes: 0,        // Déficit après rentes et crédits
+    capitalTotalDisponible: 0,    // Capital brut récupéré
+    capitalPourReinvestissement: 0, // Capital replacé
+    capitalPourConsommation: 0,     // Capital consommé
+    
+    // Paramètres
+    anneesObjectifCouverture: 20  // Nouveau paramètre
 };
 
 // ==============================================
@@ -2189,34 +2204,37 @@ function calculateTotalEconomiesCredits() {
 
 // Fonction collectProjectionData corrigée et enrichie
 function collectProjectionData() {
-    console.log('=== COLLECTE DES DONNÉES POUR PROJECTION ===');
+    console.log('=== COLLECTE DES DONNÉES POUR PROJECTION (VERSION ENRICHIE) ===');
     
     try {
-        // Conserver les données existantes si elles existent
-        if (!projectionData) {
-            projectionData = {
-                deficitMensuel: 0,
-                deficitAnnuel: 0,
-                capitalDisponible: 0,
-                revenusRentes: 0,
-                economiesCredits: 0,
-                contractsRentes: [],
-                contractsCapital: [],
-                dateDebutRetraite: null
-            };
-        }
+        // Réinitialisation complète de projectionData
+        projectionData = {
+            // Données de base
+            deficitMensuel: 0,
+            deficitAnnuel: 0,
+            economiesCredits: 0,
+            dateDebutRetraite: null,
+            
+            // Contrats par type de sortie
+            contratsRentes: [],
+            contratsCapital: [],
+            
+            // Allocation intelligente du capital
+            contratsCapitalReinvesti: [],
+            contratsCapitalConsomme: [],
+            
+            // Flux calculés
+            revenusRentesTotaux: 0,
+            deficitApresRentes: 0,
+            capitalTotalDisponible: 0,
+            capitalPourReinvestissement: 0,
+            capitalPourConsommation: 0,
+            
+            // Paramètres
+            anneesObjectifCouverture: 20
+        };
         
-        // Réinitialiser seulement les données qui vont être recalculées
-        projectionData.capitalDisponible = 0;
-        projectionData.revenusRentes = 0;
-        projectionData.economiesCredits = 0;
-        projectionData.contractsRentes = [];
-        projectionData.contractsCapital = [];
-        if (!projectionData.dateDebutRetraite) {
-            projectionData.dateDebutRetraite = null;
-        }
-        
-        // 1. Récupération du déficit avec priorité à la variable temporaire
+        // === 1. RÉCUPÉRATION DU DÉFICIT ===
         console.log('📊 1. Récupération du déficit...');
         
         if (typeof window.projectionDataTemp !== 'undefined' && window.projectionDataTemp.deficitMensuel > 0) {
@@ -2224,30 +2242,23 @@ function collectProjectionData() {
             projectionData.deficitAnnuel = window.projectionDataTemp.deficitAnnuel;
             console.log('✅ Déficit récupéré depuis variable temporaire:', projectionData.deficitMensuel);
         }
-        else if (!projectionData.deficitMensuel || projectionData.deficitMensuel === 0) {
-            // Seulement si pas de déficit déjà calculé
+        else {
+            // Tentative de récupération depuis l'interface
             const budgetResult = document.getElementById('budgetResult');
             if (budgetResult && budgetResult.classList.contains('show')) {
                 const deficitText = document.getElementById('deficitText');
                 if (deficitText) {
                     const deficitHTML = deficitText.innerHTML;
-                    console.log('🔍 HTML à analyser (premiers 200 chars):', deficitHTML.substring(0, 200));
-                    
                     const deficitMatch = deficitHTML.match(/(\d+[\d\s,]*)\s*€[\s\/]*mois/);
                     if (deficitMatch) {
                         const montantCapture = parseInt(deficitMatch[1].replace(/[\s,]/g, ''));
-                        console.log('🔍 Premier montant capturé:', montantCapture);
                         
-                        // Si le montant semble trop élevé (probablement un revenu), chercher le vrai déficit
+                        // Logique pour identifier le vrai déficit vs autres montants
                         if (montantCapture > 2000) {
-                            console.log('⚠️ Montant > 2000€, recherche du déficit...');
                             const allAmounts = deficitHTML.match(/(\d+[\d\s,]*)\s*€/g);
                             if (allAmounts && allAmounts.length > 1) {
                                 const amounts = allAmounts.map(amount => parseInt(amount.replace(/[^\d]/g, '')));
-                                console.log('🔍 Tous les montants:', amounts);
-                                const deficitProbable = Math.min(...amounts.filter(amount => amount > 0 && amount < 5000));
-                                console.log('🔍 Déficit probable:', deficitProbable);
-                                projectionData.deficitMensuel = deficitProbable;
+                                projectionData.deficitMensuel = Math.min(...amounts.filter(amount => amount > 0 && amount < 5000));
                             } else {
                                 projectionData.deficitMensuel = montantCapture;
                             }
@@ -2256,37 +2267,46 @@ function collectProjectionData() {
                         }
                         
                         projectionData.deficitAnnuel = projectionData.deficitMensuel * 12;
-                        console.log('✅ Déficit final:', projectionData.deficitMensuel);
+                        console.log('✅ Déficit extrait de l\'interface:', projectionData.deficitMensuel);
                     }
                 }
             }
-        } else {
-            console.log('✅ Déficit déjà présent:', projectionData.deficitMensuel);
+            
+            if (projectionData.deficitMensuel === 0) {
+                console.log('⚠️ Aucun déficit trouvé - calcul nécessaire dans onglet 2');
+            }
         }
         
-        // 2. Récupération des économies crédits
+        // === 2. RÉCUPÉRATION DES ÉCONOMIES CRÉDITS ===
+        console.log('🏦 2. Récupération des économies crédits...');
         projectionData.economiesCredits = calculateEconomiesMensuelles();
-        console.log('🏦 Économies crédits:', projectionData.economiesCredits);
+        console.log('✅ Économies crédits:', projectionData.economiesCredits);
         
-        // 3. Récupération des contrats et capital depuis l'onglet 3
+        // === 3. RÉCUPÉRATION ET CLASSIFICATION DES CONTRATS ===
+        console.log('💼 3. Récupération des contrats...');
+        
         const contractItems = document.querySelectorAll('.contract-management-item');
-        console.log(`💼 Contrats trouvés: ${contractItems.length}`);
+        console.log(`📋 ${contractItems.length} contrats trouvés dans l'interface`);
         
         contractItems.forEach((item, index) => {
             const sortirSelect = item.querySelector('select[onchange*="toggleContract"]');
             const sortir = sortirSelect ? sortirSelect.value === 'oui' : false;
             
-            console.log(`📋 Contrat ${index + 1} - À sortir: ${sortir}`);
-            
             if (sortir) {
+                console.log(`📄 Traitement contrat ${index + 1}...`);
+                
+                // Extraction des données de base
                 const nomInput = item.querySelector('.contract-header input[type="text"]');
                 const montantInput = item.querySelector('.contract-header input[type="number"]');
                 const typeSortieSelect = item.querySelector('.type-sortie');
+                const dateOuvertureInput = item.querySelector('.date-ouverture');
                 
                 const nom = nomInput ? nomInput.value || `Contrat ${index + 1}` : `Contrat ${index + 1}`;
-                const montant = montantInput ? parseFloat(montantInput.value) || 0 : 0;
+                const montantBrut = montantInput ? parseFloat(montantInput.value) || 0 : 0;
                 const typeSortie = typeSortieSelect ? typeSortieSelect.value : 'Capital';
+                const dateOuverture = dateOuvertureInput ? dateOuvertureInput.value : null;
                 
+                // Calcul des frais
                 const feesDisplay = item.querySelector('.fees-amount');
                 let frais = 0;
                 if (feesDisplay && feesDisplay.textContent) {
@@ -2294,111 +2314,259 @@ function collectProjectionData() {
                     frais = fraisText ? parseInt(fraisText) : 0;
                 }
                 
-                const montantNet = Math.max(0, montant - frais);
+                const montantNet = Math.max(0, montantBrut - frais);
                 
-                console.log(`💰 ${nom}: ${montant}€ - ${frais}€ frais = ${montantNet}€ net (${typeSortie})`);
-                
+                // Création de l'objet contrat
                 const contractData = {
                     nom,
-                    montantBrut: montant,
+                    montantBrut,
                     frais,
                     montantNet,
-                    typeSortie
+                    typeSortie,
+                    dateOuverture,
+                    anciennete: dateOuverture ? calculateAncienneteContrat(dateOuverture) : 0
                 };
                 
+                // Classification par type de sortie
                 if (typeSortie === 'Rente') {
+                    // Données spécifiques aux rentes
                     const renteMensuelleInput = item.querySelector('.rente-mensuelle');
-                    const revenuMensuel = renteMensuelleInput ? parseFloat(renteMensuelleInput.value) || 0 : 0;
+                    const ageLiquidationInput = item.querySelector('.age-liquidation');
                     
-                    contractData.revenuAnnuel = revenuMensuel * 12;
-                    contractData.revenuMensuel = revenuMensuel;
+                    contractData.revenuMensuel = renteMensuelleInput ? parseFloat(renteMensuelleInput.value) || 0 : 0;
+                    contractData.ageLiquidation = ageLiquidationInput ? parseInt(ageLiquidationInput.value) || 65 : 65;
+                    contractData.revenuAnnuel = contractData.revenuMensuel * 12;
                     
-                    projectionData.contractsRentes.push(contractData);
-                    projectionData.revenusRentes += contractData.revenuMensuel;
+                    projectionData.contratsRentes.push(contractData);
+                    projectionData.revenusRentesTotaux += contractData.revenuMensuel;
                     
-                    console.log(`📈 Rente ajoutée: ${revenuMensuel}€/mois`);
+                    console.log(`📈 Rente: ${nom} → ${contractData.revenuMensuel}€/mois`);
                 } else {
-                    projectionData.contractsCapital.push(contractData);
-                    projectionData.capitalDisponible += montantNet;
+                    // Capital (à répartir plus tard)
+                    projectionData.contratsCapital.push(contractData);
+                    projectionData.capitalTotalDisponible += montantNet;
                     
-                    console.log(`💵 Capital ajouté: ${montantNet}€`);
+                    console.log(`💰 Capital: ${nom} → ${montantNet}€ net`);
                 }
             }
         });
         
-        // 4. Date de début de retraite
+        // === 4. DATE DE DÉBUT DE RETRAITE ===
+        console.log('📅 4. Récupération date de retraite...');
+        
         const dateRetraite1Element = document.getElementById('dateRetraite1');
         const dateRetraite2Element = document.getElementById('dateRetraite2');
         
         if (dateRetraite1Element && dateRetraite1Element.value) {
             projectionData.dateDebutRetraite = new Date(dateRetraite1Element.value);
             
+            // Si couple, prendre la date la plus proche
             if (isCouple && dateRetraite2Element && dateRetraite2Element.value) {
                 const date2 = new Date(dateRetraite2Element.value);
                 if (date2 < projectionData.dateDebutRetraite) {
                     projectionData.dateDebutRetraite = date2;
                 }
             }
+            console.log('✅ Date de retraite:', projectionData.dateDebutRetraite.toLocaleDateString());
+        } else {
+            console.log('⚠️ Aucune date de retraite définie');
         }
         
-        console.log('📊 RÉSUMÉ FINAL:');
-        console.log('  - Déficit mensuel:', projectionData.deficitMensuel, '€');
-        console.log('  - Capital disponible:', projectionData.capitalDisponible, '€');
-        console.log('  - Revenus rentes:', projectionData.revenusRentes, '€/mois');
-        console.log('  - Économies crédits:', projectionData.economiesCredits, '€/mois');
-        console.log('  - Contrats rentes:', projectionData.contractsRentes.length);
-        console.log('  - Contrats capital:', projectionData.contractsCapital.length);
+        // === 5. ALLOCATION INTELLIGENTE DU CAPITAL ===
+        console.log('🎯 5. Allocation intelligente du capital...');
+        allouerCapitalIntelligent(projectionData);
         
-        console.log('=== FIN COLLECTE DONNÉES PROJECTION ===');
+        // === 6. RÉSUMÉ FINAL ===
+        console.log('📊 RÉSUMÉ FINAL DE LA PROJECTION:');
+        console.log('  - Déficit mensuel initial:', projectionData.deficitMensuel, '€');
+        console.log('  - Revenus rentes:', projectionData.revenusRentesTotaux, '€/mois');
+        console.log('  - Économies crédits:', projectionData.economiesCredits, '€/mois');
+        console.log('  - Déficit après optimisations:', projectionData.deficitApresRentes, '€/mois');
+        console.log('  - Capital total disponible:', projectionData.capitalTotalDisponible, '€');
+        console.log('  - Capital pour réinvestissement:', projectionData.capitalPourReinvestissement, '€');
+        console.log('  - Capital pour consommation:', projectionData.capitalPourConsommation, '€');
+        console.log('  - Contrats rentes:', projectionData.contratsRentes.length);
+        console.log('  - Contrats capital réinvestis:', projectionData.contratsCapitalReinvesti.length);
+        console.log('  - Contrats capital consommés:', projectionData.contratsCapitalConsomme.length);
+        
+        console.log('=== FIN COLLECTE DONNÉES PROJECTION ENRICHIE ===');
         return projectionData;
         
     } catch (error) {
         console.error('❌ Erreur dans collectProjectionData:', error);
+        
+        // Retour de données par défaut en cas d'erreur
         return {
             deficitMensuel: 0,
             deficitAnnuel: 0,
-            capitalDisponible: 0,
-            revenusRentes: 0,
             economiesCredits: 0,
-            contractsRentes: [],
-            contractsCapital: [],
-            dateDebutRetraite: null
+            contratsRentes: [],
+            contratsCapital: [],
+            contratsCapitalReinvesti: [],
+            contratsCapitalConsomme: [],
+            revenusRentesTotaux: 0,
+            deficitApresRentes: 0,
+            capitalTotalDisponible: 0,
+            capitalPourReinvestissement: 0,
+            capitalPourConsommation: 0,
+            dateDebutRetraite: null,
+            anneesObjectifCouverture: 20
         };
     }
 }
 
+// Fonction d'allocation intelligente
+function allouerCapitalIntelligent(data) {
+    // Calcul du déficit après optimisations
+    data.deficitApresRentes = Math.max(0, 
+        data.deficitMensuel - data.revenusRentesTotaux - data.economiesCredits
+    );
+    
+    console.log('🎯 Déficit après rentes et crédits:', data.deficitApresRentes);
+    
+    // Si plus de déficit → tout le capital est réinvesti
+    if (data.deficitApresRentes <= 0) {
+        data.capitalPourReinvestissement = data.capitalTotalDisponible;
+        data.capitalPourConsommation = 0;
+        
+        // Tous les contrats capital vont en réinvestissement
+        data.contratsCapitalReinvesti = [...data.contratsCapital];
+        data.contratsCapitalConsomme = [];
+        
+        console.log('✅ Déficit couvert → tout réinvesti');
+    }
+    else {
+        // Calcul capital nécessaire pour X années de couverture
+        const deficitAnnuel = data.deficitApresRentes * 12;
+        const capitalNecessaire = deficitAnnuel * data.anneesObjectifCouverture;
+        
+        console.log('📊 Capital nécessaire pour', data.anneesObjectifCouverture, 'ans:', capitalNecessaire);
+        
+        if (data.capitalTotalDisponible <= capitalNecessaire) {
+            // Pas assez de capital → tout est consommé
+            data.capitalPourConsommation = data.capitalTotalDisponible;
+            data.capitalPourReinvestissement = 0;
+            
+            data.contratsCapitalConsomme = [...data.contratsCapital];
+            data.contratsCapitalReinvesti = [];
+            
+            console.log('⚠️ Capital insuffisant → tout consommé');
+        }
+        else {
+            // Assez de capital → on optimise
+            data.capitalPourConsommation = capitalNecessaire;
+            data.capitalPourReinvestissement = data.capitalTotalDisponible - capitalNecessaire;
+            
+            // Répartir les contrats intelligemment
+            repartirContratsCapital(data);
+            
+            console.log('🎯 Allocation optimisée → répartition mixte');
+        }
+    }
+}
+
+// Fonction de répartition des contrats
+function repartirContratsCapital(data) {
+    // Pour l'instant, version simple : on consomme les premiers contrats
+    // Version future : logique de priorisation fiscale
+    
+    let capitalRestantAConsommer = data.capitalPourConsommation;
+    data.contratsCapitalConsomme = [];
+    data.contratsCapitalReinvesti = [];
+    
+    for (const contrat of data.contratsCapital) {
+        if (capitalRestantAConsommer >= contrat.montantNet) {
+            data.contratsCapitalConsomme.push(contrat);
+            capitalRestantAConsommer -= contrat.montantNet;
+        } else {
+            data.contratsCapitalReinvesti.push(contrat);
+        }
+    }
+    
+    console.log('📋 Répartition contrats:', {
+        consommes: data.contratsCapitalConsomme.length,
+        reinvestis: data.contratsCapitalReinvesti.length
+    });
+}
+
 // Fonction updateProjectionRecap enrichie
 function updateProjectionRecap() {
+    console.log('🔄 DÉBUT updateProjectionRecap()');
+    
     try {
-        const data = collectProjectionData();
-        
+        // Debug : vérifier les éléments DOM
         const deficitProjectionElement = document.getElementById('deficitProjection');
         const capitalProjectionElement = document.getElementById('capitalProjection');
         const rentesProjectionElement = document.getElementById('rentesProjection');
         const economiesCreditsElement = document.getElementById('economiesCredits');
         
-        if (deficitProjectionElement && data.deficitMensuel > 0) {
-            deficitProjectionElement.innerHTML = `
-                <div>${data.deficitMensuel.toLocaleString()} € / mois</div>
-                <small style="opacity: 0.8;">${data.deficitAnnuel.toLocaleString()} € / an</small>
-            `;
+        console.log('📋 Éléments DOM trouvés:', {
+            deficit: !!deficitProjectionElement,
+            capital: !!capitalProjectionElement,
+            rentes: !!rentesProjectionElement,
+            economies: !!economiesCreditsElement
+        });
+        
+        // Collecte des données SANS allocation (pour le récap seulement)
+        const data = collectProjectionDataLight();
+        
+        console.log('📊 Données collectées pour récap:', {
+            deficitMensuel: data.deficitMensuel,
+            capitalTotal: data.capitalTotalDisponible,
+            revenusRentes: data.revenusRentesTotaux,
+            economiesCredits: data.economiesCredits,
+            nbContratsRentes: data.contratsRentes.length,
+            nbContratsCapital: data.contratsCapital.length
+        });
+        
+        // Mise à jour DÉFICIT
+        if (deficitProjectionElement) {
+            if (data.deficitMensuel > 0) {
+                deficitProjectionElement.innerHTML = `
+                    <div>${data.deficitMensuel.toLocaleString()} € / mois</div>
+                    <small style="opacity: 0.8;">${(data.deficitMensuel * 12).toLocaleString()} € / an</small>
+                `;
+            } else {
+                deficitProjectionElement.innerHTML = `
+                    <div style="color: #f44336;">0 € / mois</div>
+                    <small style="opacity: 0.8;">Calculez votre déficit dans l'onglet 2</small>
+                `;
+            }
         }
         
-        if (capitalProjectionElement && data.capitalDisponible > 0) {
-            const nbAnneesCouverture = data.deficitAnnuel > 0 ? (data.capitalDisponible / data.deficitAnnuel).toFixed(1) : '∞';
-            capitalProjectionElement.innerHTML = `
-                <div>${data.capitalDisponible.toLocaleString()} €</div>
-                <small style="opacity: 0.8;">≈ ${nbAnneesCouverture} années de couverture</small>
-            `;
+        // Mise à jour CAPITAL
+        if (capitalProjectionElement) {
+            if (data.capitalTotalDisponible > 0) {
+                const nbAnneesCouverture = data.deficitMensuel > 0 ? 
+                    (data.capitalTotalDisponible / (data.deficitMensuel * 12)).toFixed(1) : '∞';
+                capitalProjectionElement.innerHTML = `
+                    <div>${data.capitalTotalDisponible.toLocaleString()} €</div>
+                    <small style="opacity: 0.8;">≈ ${nbAnneesCouverture} années de couverture</small>
+                `;
+            } else {
+                capitalProjectionElement.innerHTML = `
+                    <div style="color: #ff9800;">0 €</div>
+                    <small style="opacity: 0.8;">Sélectionnez des contrats en capital dans l'onglet 3</small>
+                `;
+            }
         }
         
-        if (rentesProjectionElement && data.revenusRentes > 0) {
-            rentesProjectionElement.innerHTML = `
-                <div>${Math.round(data.revenusRentes).toLocaleString()} € / mois</div>
-                <small style="opacity: 0.8;">${Math.round(data.revenusRentes * 12).toLocaleString()} € / an</small>
-            `;
+        // Mise à jour RENTES
+        if (rentesProjectionElement) {
+            if (data.revenusRentesTotaux > 0) {
+                rentesProjectionElement.innerHTML = `
+                    <div>${Math.round(data.revenusRentesTotaux).toLocaleString()} € / mois</div>
+                    <small style="opacity: 0.8;">${Math.round(data.revenusRentesTotaux * 12).toLocaleString()} € / an</small>
+                `;
+            } else {
+                rentesProjectionElement.innerHTML = `
+                    <div style="color: #ff9800;">0 € / mois</div>
+                    <small style="opacity: 0.8;">Sélectionnez des contrats en rente dans l'onglet 3</small>
+                `;
+            }
         }
         
+        // Mise à jour ÉCONOMIES CRÉDITS
         if (economiesCreditsElement) {
             if (data.economiesCredits > 0) {
                 economiesCreditsElement.innerHTML = `
@@ -2408,14 +2576,82 @@ function updateProjectionRecap() {
             } else {
                 economiesCreditsElement.innerHTML = `
                     <div>0 € / mois</div>
-                    <small style="opacity: 0.8;">Aucun remboursement anticipé</small>
+                    <small style="opacity: 0.8;">Pas de remboursement anticipé</small>
                 `;
             }
         }
         
+        console.log('✅ updateProjectionRecap() terminé');
+        
     } catch (error) {
         console.error('❌ Erreur dans updateProjectionRecap:', error);
     }
+}
+
+// Fonction simplifiée pour le récap (sans allocation)
+function collectProjectionDataLight() {
+    const data = {
+        deficitMensuel: 0,
+        capitalTotalDisponible: 0,
+        revenusRentesTotaux: 0,
+        economiesCredits: 0,
+        contratsRentes: [],
+        contratsCapital: []
+    };
+    
+    // Récupération du déficit
+    if (typeof window.projectionDataTemp !== 'undefined' && window.projectionDataTemp.deficitMensuel > 0) {
+        data.deficitMensuel = window.projectionDataTemp.deficitMensuel;
+    }
+    
+    // Récupération des économies crédits
+    data.economiesCredits = calculateEconomiesMensuelles();
+    
+    // Récupération des contrats
+    const contractItems = document.querySelectorAll('.contract-management-item');
+    console.log(`🔍 ${contractItems.length} contrats trouvés dans l'onglet 3`);
+    
+    contractItems.forEach((item, index) => {
+        const sortirSelect = item.querySelector('select[onchange*="toggleContract"]');
+        const sortir = sortirSelect ? sortirSelect.value === 'oui' : false;
+        
+        console.log(`📋 Contrat ${index + 1}: sortir=${sortir}`);
+        
+        if (sortir) {
+            const nomInput = item.querySelector('.contract-header input[type="text"]');
+            const montantInput = item.querySelector('.contract-header input[type="number"]');
+            const typeSortieSelect = item.querySelector('.type-sortie');
+            
+            const nom = nomInput ? nomInput.value || `Contrat ${index + 1}` : `Contrat ${index + 1}`;
+            const montantBrut = montantInput ? parseFloat(montantInput.value) || 0 : 0;
+            const typeSortie = typeSortieSelect ? typeSortieSelect.value : 'Capital';
+            
+            // Calcul des frais
+            const feesDisplay = item.querySelector('.fees-amount');
+            let frais = 0;
+            if (feesDisplay && feesDisplay.textContent) {
+                const fraisText = feesDisplay.textContent.replace(/[^\d]/g, '');
+                frais = fraisText ? parseInt(fraisText) : 0;
+            }
+            
+            const montantNet = Math.max(0, montantBrut - frais);
+            
+            console.log(`💼 ${nom}: ${montantBrut}€ - ${frais}€ = ${montantNet}€ (${typeSortie})`);
+            
+            if (typeSortie === 'Rente') {
+                const renteMensuelleInput = item.querySelector('.rente-mensuelle');
+                const revenuMensuel = renteMensuelleInput ? parseFloat(renteMensuelleInput.value) || 0 : 0;
+                
+                data.contratsRentes.push({ nom, revenuMensuel });
+                data.revenusRentesTotaux += revenuMensuel;
+            } else {
+                data.contratsCapital.push({ nom, montantNet });
+                data.capitalTotalDisponible += montantNet;
+            }
+        }
+    });
+    
+    return data;
 }
 
 // ==============================================
@@ -2469,23 +2705,394 @@ document.addEventListener('DOMContentLoaded', function() {
 
 // Fonctions de projection et calculs complexes (à compléter dans une 3ème partie si nécessaire)
 function calculateProjection() {
-    console.log('🚀 Calcul de projection - Version enrichie avec économies crédits');
-    // Implementation complète des calculs de projection
-    // Cette fonction sera complète avec toutes les nouvelles fonctionnalités
+    console.log('=== DÉBUT CALCUL PROJECTION ENRICHIE ===');
+    
+    try {
+        // Vérification des éléments DOM essentiels
+        const strategyOverview = document.getElementById('strategyOverview');
+        const projectionTable = document.getElementById('projectionTable');
+        const recommendations = document.getElementById('recommendations');
+        const projectionResult = document.getElementById('projectionResult');
+        const allocationOverview = document.getElementById('allocationOverview');
+        const allocationGrid = document.getElementById('allocationGrid');
+        
+        console.log('🔍 VÉRIFICATION ÉLÉMENTS DOM:', {
+            strategyOverview: !!strategyOverview,
+            projectionTable: !!projectionTable, 
+            recommendations: !!recommendations,
+            projectionResult: !!projectionResult,
+            allocationOverview: !!allocationOverview,
+            allocationGrid: !!allocationGrid
+        });
+        
+        // Si un élément manque, on l'affiche dans la console
+        if (!strategyOverview) console.error('❌ strategyOverview manquant');
+        if (!projectionTable) console.error('❌ projectionTable manquant');
+        if (!recommendations) console.error('❌ recommendations manquant');
+        if (!projectionResult) console.error('❌ projectionResult manquant');
+        if (!allocationOverview) console.error('❌ allocationOverview manquant');
+        if (!allocationGrid) console.error('❌ allocationGrid manquant');
+        
+        // Si tous les éléments existent, on continue
+        if (strategyOverview && projectionTable && recommendations && projectionResult) {
+            console.log('✅ Tous les éléments DOM trouvés, calcul en cours...');
+            
+            // Collecte des données et paramètres
+            const data = collectProjectionData();
+            
+            // Affichage de l'allocation
+            generateAllocationOverview(data);
+            
+            // Test simple pour commencer
+            strategyOverview.innerHTML = '<h5>🎯 Test Stratégie</h5><p>Les données sont collectées avec succès !</p>';
+            projectionTable.innerHTML = '<h5>📊 Test Tableau</h5><p>Tableau en construction...</p>';
+            recommendations.innerHTML = '<h5>💡 Test Recommandations</h5><p>Recommandations en construction...</p>';
+            
+            projectionResult.classList.add('show');
+            
+            console.log('✅ Affichage test terminé');
+        } else {
+            console.error('❌ Éléments DOM manquants pour la projection');
+            alert('Erreur: Certains éléments de l\'onglet Projection sont manquants. Vérifiez votre fichier HTML.');
+            return;
+        }
+        
+    } catch (error) {
+        console.error('❌ Erreur dans calculateProjection:', error);
+        alert('Erreur lors du calcul: ' + error.message);
+    }
 }
 
 function generateStrategyOverview(data, deficitApresRentes) {
-    // Implementation complète avec intégration des économies crédits
+    console.log('📊 Génération aperçu stratégie');
+    
+    let html = `<h5 style="color: #2c3e50; margin-bottom: 20px;">🎯 Aperçu de la Stratégie de Comblement</h5>`;
+    
+    // Vue d'ensemble des optimisations
+    const totalOptimisations = data.revenusRentesTotaux + data.economiesCredits;
+    
+    if (totalOptimisations > 0) {
+        const couvertureOptimisations = data.deficitMensuel > 0 ? (totalOptimisations / data.deficitMensuel) * 100 : 0;
+        const alertClass = couvertureOptimisations >= 100 ? 'success' : couvertureOptimisations >= 50 ? 'warning' : 'danger';
+        
+        html += `
+            <div class="strategy-alert ${alertClass}">
+                <h6>📈 Couverture par Optimisations</h6>
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-top: 15px;">
+                    <div>
+                        <strong>Déficit initial :</strong><br>
+                        <span style="font-size: 1.2em; color: #dc3545;">${Math.round(data.deficitMensuel).toLocaleString()} € / mois</span>
+                    </div>
+                    <div>
+                        <strong>Revenus de rentes :</strong><br>
+                        <span style="font-size: 1.2em; color: #2196f3;">${Math.round(data.revenusRentesTotaux).toLocaleString()} € / mois</span>
+                    </div>
+                    <div>
+                        <strong>Économies crédits :</strong><br>
+                        <span style="font-size: 1.2em; color: #4caf50;">${Math.round(data.economiesCredits).toLocaleString()} € / mois</span>
+                    </div>
+                    <div>
+                        <strong>Couverture du déficit :</strong><br>
+                        <span style="font-size: 1.2em; font-weight: bold; color: ${couvertureOptimisations >= 100 ? '#28a745' : '#dc3545'};">${Math.round(couvertureOptimisations)}%</span>
+                    </div>
+                </div>
+                <div style="margin-top: 15px; padding: 15px; background: rgba(255,255,255,0.3); border-radius: 8px;">
+                    <strong>Déficit restant après optimisations : 
+                    <span style="color: ${deficitApresRentes > 0 ? '#dc3545' : '#28a745'}; font-size: 1.1em;">
+                        ${Math.round(deficitApresRentes).toLocaleString()} € / mois
+                    </span></strong>
+                </div>
+            </div>
+        `;
+    }
+    
+    // Analyse du capital disponible
+    if (data.capitalTotalDisponible > 0 && deficitApresRentes > 0) {
+        const anneesCouverte = data.capitalTotalDisponible / (deficitApresRentes * 12);
+        const alertClass = anneesCouverte >= 20 ? 'success' : anneesCouverte >= 10 ? 'warning' : 'danger';
+        
+        html += `
+            <div class="strategy-alert ${alertClass}">
+                <h6>💰 Utilisation du Capital</h6>
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-top: 15px;">
+                    <div>
+                        <strong>Capital disponible :</strong><br>
+                        <span style="font-size: 1.2em;">${data.capitalTotalDisponible.toLocaleString()} €</span>
+                    </div>
+                    <div>
+                        <strong>Prélèvement annuel :</strong><br>
+                        <span style="font-size: 1.2em;">${Math.round(deficitApresRentes * 12).toLocaleString()} €</span>
+                    </div>
+                    <div>
+                        <strong>Durée de couverture :</strong><br>
+                        <span style="font-size: 1.2em; font-weight: bold; color: ${anneesCouverte >= 20 ? '#28a745' : anneesCouverte >= 10 ? '#ffc107' : '#dc3545'};">
+                            ${anneesCouverte.toFixed(1)} années
+                        </span>
+                    </div>
+                    <div>
+                        <strong>Répartition :</strong><br>
+                        <span style="font-size: 1.1em;">
+                            ${Math.round(data.capitalPourConsommation).toLocaleString()}€ consommé<br>
+                            ${Math.round(data.capitalPourReinvestissement).toLocaleString()}€ réinvesti
+                        </span>
+                    </div>
+                </div>
+            </div>
+        `;
+    } else if (deficitApresRentes <= 0) {
+        html += `
+            <div class="strategy-alert success">
+                <h6>🎉 Situation Optimale Atteinte</h6>
+                <p style="margin: 10px 0;">Vos optimisations (rentes + économies crédits) couvrent entièrement votre déficit ! 
+                ${data.capitalTotalDisponible > 0 ? `Le capital disponible de <strong>${data.capitalTotalDisponible.toLocaleString()} €</strong> peut être entièrement replacé pour faire fructifier votre patrimoine.` : ''}</p>
+            </div>
+        `;
+    } else if (data.capitalTotalDisponible === 0) {
+        html += `
+            <div class="strategy-alert danger">
+                <h6>⚠️ Capital Insuffisant</h6>
+                <p style="margin: 10px 0;">
+                    Après les optimisations, il reste un déficit de <strong>${Math.round(deficitApresRentes).toLocaleString()} €/mois</strong> 
+                    mais aucun capital n'est disponible pour le combler.
+                </p>
+                <p style="margin: 10px 0; font-weight: 600;">
+                    Solutions possibles : reporter la retraite, réduire le train de vie, ou liquider d'autres actifs.
+                </p>
+            </div>
+        `;
+    }
+    
+    return html;
 }
 
 function generateProjectionTable(data, deficitAnnuelApresRentes, rendementReplacement, inflationRate, ageEsperanceVie) {
-    // Implementation complète des tableaux de projection
+    console.log('📊 Génération tableau projection');
+    
+    if (deficitAnnuelApresRentes <= 0) {
+        return `
+            <div class="strategy-alert success">
+                <h5>✅ Aucun Prélèvement Nécessaire</h5>
+                <p>Vos optimisations (rentes: ${Math.round(data.revenusRentesTotaux).toLocaleString()} €/mois + économies crédits: ${Math.round(data.economiesCredits).toLocaleString()} €/mois) suffisent à couvrir le déficit.</p>
+                ${data.capitalTotalDisponible > 0 ? `<p>Le capital de <strong>${data.capitalTotalDisponible.toLocaleString()} €</strong> peut être entièrement replacé pour faire fructifier votre patrimoine.</p>` : ''}
+            </div>
+        `;
+    }
+    
+    if (data.capitalTotalDisponible === 0) {
+        return `
+            <div class="strategy-alert danger">
+                <h5>⚠️ Aucun Capital Disponible</h5>
+                <p>Déficit résiduel de <strong>${Math.round(deficitAnnuelApresRentes/12).toLocaleString()} €/mois</strong> mais aucun capital pour le combler.</p>
+                <p>Veuillez sélectionner des contrats en sortie capital dans l'onglet 3 ou revoir votre stratégie.</p>
+            </div>
+        `;
+    }
+    
+    const anneeActuelle = new Date().getFullYear();
+    const anneeRetraite = data.dateDebutRetraite ? data.dateDebutRetraite.getFullYear() : anneeActuelle;
+    const ageActuel = parseInt(document.getElementById('age1').value) || 35;
+    const ageRetraite = ageActuel + (anneeRetraite - anneeActuelle);
+    
+    let html = `
+        <h5 style="color: #2c3e50; margin-bottom: 20px;">📅 Projection Année par Année</h5>
+        <div style="background: #e3f2fd; padding: 15px; border-radius: 8px; margin-bottom: 20px;">
+            <h6 style="color: #1565c0; margin-bottom: 10px;">📊 Paramètres de Simulation</h6>
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px;">
+                <div><strong>Capital initial :</strong> ${data.capitalTotalDisponible.toLocaleString()} €</div>
+                <div><strong>Rendement :</strong> ${(rendementReplacement * 100).toFixed(1)}% / an</div>
+                <div><strong>Inflation :</strong> ${(inflationRate * 100).toFixed(1)}% / an</div>
+                <div><strong>Déficit résiduel :</strong> ${Math.round(deficitAnnuelApresRentes/12).toLocaleString()} €/mois</div>
+            </div>
+        </div>
+        
+        <div style="overflow-x: auto;">
+            <table class="projection-table">
+                <thead>
+                    <tr>
+                        <th>Année</th>
+                        <th>Âge</th>
+                        <th>Capital Début</th>
+                        <th>Rendement</th>
+                        <th>Prélèvement</th>
+                        <th>Capital Fin</th>
+                        <th>Statut</th>
+                    </tr>
+                </thead>
+                <tbody>
+    `;
+    
+    let capitalRestant = data.capitalTotalDisponible;
+    const deficitInitial = deficitAnnuelApresRentes;
+    let capitalEpuise = false;
+    let anneeEpuisement = null;
+    
+    for (let annee = anneeRetraite; annee <= anneeRetraite + (ageEsperanceVie - ageRetraite) && !capitalEpuise; annee++) {
+        const age = ageRetraite + (annee - anneeRetraite);
+        const capitalDebut = capitalRestant;
+        
+        const rendementAnnuel = capitalRestant * rendementReplacement;
+        
+        const anneesDepuisRetraite = annee - anneeRetraite;
+        const deficitAvecInflation = deficitInitial * Math.pow(1 + inflationRate, anneesDepuisRetraite);
+        
+        const prelevementAnnuel = Math.min(deficitAvecInflation, capitalRestant + rendementAnnuel);
+        
+        capitalRestant = Math.max(0, capitalRestant + rendementAnnuel - prelevementAnnuel);
+        
+        let statut, classe;
+        if (capitalRestant === 0 && prelevementAnnuel < deficitAvecInflation) {
+            statut = "📉 Capital épuisé";
+            classe = "capital-depleted";
+            capitalEpuise = true;
+            anneeEpuisement = annee;
+        } else if (capitalRestant > deficitAvecInflation * 3) {
+            statut = "💚 Très confortable";
+            classe = "capital-high";
+        } else if (capitalRestant > deficitAvecInflation) {
+            statut = "🟡 Correct";
+            classe = "capital-medium";
+        } else {
+            statut = "🔴 Attention";
+            classe = "capital-low";
+        }
+        
+        html += `
+            <tr class="${classe}">
+                <td><strong>${annee}</strong></td>
+                <td>${age} ans</td>
+                <td>${Math.round(capitalDebut).toLocaleString()} €</td>
+                <td>+${Math.round(rendementAnnuel).toLocaleString()} €</td>
+                <td>-${Math.round(prelevementAnnuel).toLocaleString()} €</td>
+                <td><strong>${Math.round(capitalRestant).toLocaleString()} €</strong></td>
+                <td>${statut}</td>
+            </tr>
+        `;
+        
+        if (capitalEpuise) {
+            html += `
+                <tr style="background: #f8d7da; font-style: italic;">
+                    <td colspan="7" style="text-align: center; padding: 15px; color: #721c24;">
+                        <strong>⚠️ Capital épuisé à ${age} ans (${annee})</strong><br>
+                        <small>Les rentes viagères (${Math.round(data.revenusRentesTotaux).toLocaleString()} €/mois) continuent à vie</small>
+                    </td>
+                </tr>
+            `;
+        }
+    }
+    
+    html += `
+                </tbody>
+            </table>
+        </div>
+        <div style="margin-top: 15px; padding: 15px; background: #f8f9fa; border-radius: 8px; font-size: 0.9em; color: #6c757d;">
+            <strong>📝 Notes importantes :</strong><br>
+            • Rentes viagères maintenues à vie (${Math.round(data.revenusRentesTotaux).toLocaleString()} €/mois)<br>
+            • ${data.economiesCredits > 0 ? `Économies crédits maintenues (${Math.round(data.economiesCredits).toLocaleString()} €/mois)<br>` : ''}
+            • Prélèvements ajustés à l'inflation ${(inflationRate*100).toFixed(1)}%<br>
+            ${anneeEpuisement ? `• Capital épuisé en ${anneeEpuisement} mais revenus garantis continuent` : '• Capital préservé sur toute la durée'}
+        </div>
+    `;
+    
+    return html;
 }
 
 function generateRecommendations(data, deficitApresRentes, rendementReplacement) {
-    // Implementation complète des recommandations enrichies
+    console.log('💡 Génération recommandations');
+    
+    let html = `<h5 style="color: #2c3e50; margin-bottom: 20px;">💡 Recommandations Stratégiques</h5>`;
+    
+    const recommendations = [];
+    
+    // Analyse de la couverture par les rentes
+    const couvertureRentes = data.deficitMensuel > 0 ? (data.revenusRentesTotaux / data.deficitMensuel) * 100 : 0;
+    
+    if (couvertureRentes < 50 && data.contratsCapital.length > 0) {
+        recommendations.push({
+            priority: 'high',
+            title: '📈 Privilégier les Sorties en Rente',
+            content: `Les rentes ne couvrent que ${Math.round(couvertureRentes)}% de votre déficit. Considérez convertir ${Math.round(deficitApresRentes * 300).toLocaleString()} € de capital en rente pour sécuriser ${Math.round(deficitApresRentes * 0.7).toLocaleString()} €/mois de revenus garantis supplémentaires.`
+        });
+    }
+    
+    // Analyse du capital disponible
+    if (data.capitalTotalDisponible > 0 && deficitApresRentes > 0) {
+        const anneesCouverte = data.capitalTotalDisponible / (deficitApresRentes * 12);
+        
+        if (anneesCouverte < 15) {
+            recommendations.push({
+                priority: 'high',
+                title: '⚠️ Risque d\'Épuisement du Capital',
+                content: `Votre capital ne couvre que ${anneesCouverte.toFixed(1)} années. Solutions : 1) Augmenter les rentes viagères, 2) Réduire le train de vie de ${Math.round(deficitApresRentes * 0.2).toLocaleString()} €/mois, 3) Reporter la retraite de 1-2 ans, 4) Optimiser le rendement des placements.`
+            });
+        } else if (anneesCouverte > 25) {
+            recommendations.push({
+                priority: 'low',
+                title: '🎉 Situation Très Confortable',
+                content: `Votre capital couvre ${anneesCouverte.toFixed(1)} années. Vous pourriez envisager d'augmenter votre train de vie de ${Math.round(deficitApresRentes * 0.2).toLocaleString()} €/mois ou constituer un héritage plus important.`
+            });
+        }
+    }
+    
+    // Recommandations sur les crédits
+    if (data.economiesCredits === 0) {
+        const creditItems = document.querySelectorAll('.credit-item');
+        if (creditItems.length > 0) {
+            recommendations.push({
+                priority: 'medium',
+                title: '🏦 Analyser les Remboursements Anticipés',
+                content: `Vous avez des crédits en cours. Avec ${data.capitalTotalDisponible.toLocaleString()} € de capital disponible, étudiez la possibilité de rembourser par anticipation pour générer des économies mensuelles.`
+            });
+        }
+    }
+    
+    // Recommandations sur le rendement
+    if (rendementReplacement < 0.03) {
+        recommendations.push({
+            priority: 'medium',
+            title: '📊 Optimiser le Rendement',
+            content: `Avec un rendement de ${(rendementReplacement*100).toFixed(1)}%, considérez diversifier vers des actifs plus performants (4-5%) pour prolonger la durée de votre capital. Attention au risque !`
+        });
+    }
+    
+    // Situation optimale
+    if (deficitApresRentes <= 0) {
+        recommendations.push({
+            priority: 'low',
+            title: '🏆 Stratégie Optimale',
+            content: `Félicitations ! Vos optimisations (${Math.round(data.revenusRentesTotaux + data.economiesCredits).toLocaleString()} €/mois) couvrent entièrement votre déficit. Votre stratégie retraite est parfaitement équilibrée.`
+        });
+    }
+    
+    // Situation critique
+    if (data.capitalTotalDisponible === 0 && deficitApresRentes > 0) {
+        recommendations.push({
+            priority: 'high',
+            title: '🚨 Action Urgente Requise',
+            content: `Déficit résiduel de ${Math.round(deficitApresRentes).toLocaleString()} €/mois sans capital pour le combler. Actions immédiates : 1) Liquider d'autres actifs, 2) Reporter la retraite, 3) Réduire significativement le train de vie, 4) Rechercher des revenus complémentaires.`
+        });
+    }
+    
+    // Affichage des recommandations
+    if (recommendations.length === 0) {
+        html += `
+            <div class="strategy-alert success">
+                <h6>✅ Stratégie Équilibrée</h6>
+                <p>Votre stratégie actuelle semble bien équilibrée. Surveillez régulièrement l'évolution de vos contrats et les conditions de marché.</p>
+            </div>
+        `;
+    } else {
+        recommendations.forEach(rec => {
+            html += `
+                <div class="recommendation-item priority-${rec.priority}">
+                    <h6 style="margin-bottom: 10px; color: #2c3e50;">${rec.title}</h6>
+                    <p style="margin: 0; line-height: 1.5;">${rec.content}</p>
+                </div>
+            `;
+        });
+    }
+    
+    return html;
 }
-
 function initProjectionTab() {
     try {
         updateProjectionRecap();
@@ -2551,11 +3158,27 @@ function calculateProjection() {
         const recommendations = document.getElementById('recommendations');
         const projectionResult = document.getElementById('projectionResult');
         
+        console.log('🔍 VÉRIFICATION ÉLÉMENTS DOM:', {
+            strategyOverview: !!strategyOverview,
+            projectionTable: !!projectionTable, 
+            recommendations: !!recommendations,
+            projectionResult: !!projectionResult
+        });
+        
         if (!strategyOverview || !projectionTable || !recommendations || !projectionResult) {
             console.error('❌ Éléments DOM manquants pour la projection');
-            alert('Erreur: Certains éléments de l\'onglet Projection sont manquants. Vérifiez votre fichier HTML.');
+            
+            // Affichage détaillé des éléments manquants
+            if (!strategyOverview) console.error('❌ strategyOverview manquant');
+            if (!projectionTable) console.error('❌ projectionTable manquant');
+            if (!recommendations) console.error('❌ recommendations manquant');
+            if (!projectionResult) console.error('❌ projectionResult manquant');
+            
+            alert('Erreur: Certains éléments de l\'onglet Projection sont manquants dans le HTML.');
             return;
         }
+
+        console.log('✅ Tous les éléments DOM trouvés');
 
         // Collecte des données et paramètres
         updateProjectionRecap();
@@ -2565,39 +3188,46 @@ function calculateProjection() {
         const inflationRate = (parseFloat(document.getElementById('inflationRate').value) || 2.0) / 100;
         const ageEsperanceVie = parseInt(document.getElementById('ageEsperanceVie').value) || 85;
         
+        console.log('📊 Paramètres:', {
+            rendement: (rendementReplacement * 100).toFixed(1) + '%',
+            inflation: (inflationRate * 100).toFixed(1) + '%',
+            esperanceVie: ageEsperanceVie
+        });
+
         // Déficit après rentes et économies crédits
-        const deficitApresOptimisations = Math.max(0, data.deficitMensuel - data.revenusRentes - data.economiesCredits);
+        const deficitApresOptimisations = Math.max(0, data.deficitMensuel - data.revenusRentesTotaux - data.economiesCredits);
         const deficitAnnuelApresOptimisations = deficitApresOptimisations * 12;
         
-        // Génération des différentes sections
-        let strategyHTML = generateStrategyOverviewEnriched(data, deficitApresOptimisations);
-        strategyOverview.innerHTML = strategyHTML;
+        console.log('🎯 Déficit après optimisations:', deficitApresOptimisations, '€/mois');
+
+        // Affichage de l'allocation intelligente
+        generateAllocationOverview(data);
         
-        if (data.dateDebutRetraite && (data.capitalDisponible > 0 || data.revenusRentes > 0 || data.economiesCredits > 0)) {
-            const projectionTableHTML = generateProjectionTableEnriched(data, deficitAnnuelApresOptimisations, rendementReplacement, inflationRate, ageEsperanceVie);
-            projectionTable.innerHTML = projectionTableHTML;
-            
-            const recommendationsHTML = generateRecommendationsEnriched(data, deficitApresOptimisations, rendementReplacement);
-            recommendations.innerHTML = recommendationsHTML;
-        } else {
-            projectionTable.innerHTML = `
-                <div class="strategy-alert warning">
-                    <h5>⚠️ Données incomplètes</h5>
-                    <p>Veuillez compléter les onglets précédents pour générer la projection :</p>
-                    <ul style="margin: 10px 0; padding-left: 20px;">
-                        <li>Définir votre date de retraite (onglet 1)</li>
-                        <li>Calculer votre déficit (onglet 2)</li>
-                        <li>Sélectionner vos contrats à liquider (onglet 3)</li>
-                    </ul>
-                </div>
-            `;
-        }
+        // Génération des sections
+        console.log('📝 Génération du contenu...');
         
+        strategyOverview.innerHTML = generateStrategyOverview(data, deficitApresOptimisations);
+        
+        projectionTable.innerHTML = generateProjectionTable(
+            data, 
+            deficitAnnuelApresOptimisations, 
+            rendementReplacement, 
+            inflationRate, 
+            ageEsperanceVie
+        );
+        
+        recommendations.innerHTML = generateRecommendations(data, deficitApresOptimisations, rendementReplacement);
+        
+        // Affichage des résultats
         projectionResult.classList.add('show');
+        
+        console.log('✅ Projection générée avec succès');
         console.log('=== FIN CALCUL PROJECTION ENRICHIE ===');
         
     } catch (error) {
         console.error('❌ Erreur dans calculateProjection:', error);
+        console.error('Stack trace:', error.stack);
+        alert('Erreur lors du calcul: ' + error.message);
     }
 }
 
@@ -2875,4 +3505,112 @@ function generateRecommendationsEnriched(data, deficitApresOptimisations, rendem
     }
     
     return html;
+}
+
+function generateAllocationOverview(data) {
+    const allocationOverview = document.getElementById('allocationOverview');
+    const allocationGrid = document.getElementById('allocationGrid');
+    
+    if (!allocationOverview || !allocationGrid) return;
+    
+    let html = '';
+    
+    // 1. BLOC RENTES VIAGÈRES
+    if (data.contratsRentes.length > 0) {
+        html += `
+            <div class="allocation-card rentes">
+                <div class="allocation-header">
+                    <h5>📈 RENTES VIAGÈRES</h5>
+                    <div class="allocation-subtitle">Revenus garantis à vie</div>
+                </div>
+                <div class="allocation-content">
+        `;
+        
+        data.contratsRentes.forEach(contrat => {
+            html += `
+                <div class="contrat-item">
+                    <span class="contrat-nom">${contrat.nom}</span>
+                    <span class="contrat-montant">${Math.round(contrat.revenuMensuel || 0).toLocaleString()} €/mois</span>
+                </div>
+            `;
+        });
+        
+        html += `
+                    <div class="allocation-total">
+                        <strong>Total : ${Math.round(data.revenusRentesTotaux).toLocaleString()} €/mois</strong>
+                        <small>${Math.round(data.revenusRentesTotaux * 12).toLocaleString()} €/an</small>
+                    </div>
+                </div>
+            </div>
+        `;
+    }
+    
+    // 2. BLOC CAPITAL RÉINVESTI
+    if (data.contratsCapitalReinvesti.length > 0) {
+        const rendementAnnuel = data.capitalPourReinvestissement * 0.035; // Paramètre à récupérer
+        
+        html += `
+            <div class="allocation-card reinvesti">
+                <div class="allocation-header">
+                    <h5>💰 CAPITAL RÉINVESTI</h5>
+                    <div class="allocation-subtitle">Croissance patrimoniale</div>
+                </div>
+                <div class="allocation-content">
+        `;
+        
+        data.contratsCapitalReinvesti.forEach(contrat => {
+            html += `
+                <div class="contrat-item">
+                    <span class="contrat-nom">${contrat.nom}</span>
+                    <span class="contrat-montant">${Math.round(contrat.montantNet).toLocaleString()} €</span>
+                </div>
+            `;
+        });
+        
+        html += `
+                    <div class="allocation-total">
+                        <strong>Capital : ${Math.round(data.capitalPourReinvestissement).toLocaleString()} €</strong>
+                        <small>+${Math.round(rendementAnnuel).toLocaleString()} €/an estimé</small>
+                    </div>
+                </div>
+            </div>
+        `;
+    }
+    
+    // 3. BLOC CAPITAL CONSOMMÉ
+    if (data.contratsCapitalConsomme.length > 0) {
+        const dureeEstimee = data.deficitApresRentes > 0 ? 
+            (data.capitalPourConsommation / (data.deficitApresRentes * 12)).toFixed(1) : '∞';
+        
+        html += `
+            <div class="allocation-card consomme">
+                <div class="allocation-header">
+                    <h5>🎯 CAPITAL CONSOMMÉ</h5>
+                    <div class="allocation-subtitle">Comblement du déficit</div>
+                </div>
+                <div class="allocation-content">
+        `;
+        
+        data.contratsCapitalConsomme.forEach(contrat => {
+            html += `
+                <div class="contrat-item">
+                    <span class="contrat-nom">${contrat.nom}</span>
+                    <span class="contrat-montant">${Math.round(contrat.montantNet).toLocaleString()} €</span>
+                </div>
+            `;
+        });
+        
+        html += `
+                    <div class="allocation-total">
+                        <strong>Capital : ${Math.round(data.capitalPourConsommation).toLocaleString()} €</strong>
+                        <small>Prélèvement : ${Math.round(data.deficitApresRentes * 12).toLocaleString()} €/an</small>
+                        <small>Durée estimée : ${dureeEstimee} années</small>
+                    </div>
+                </div>
+            </div>
+        `;
+    }
+    
+    allocationGrid.innerHTML = html;
+    allocationOverview.style.display = 'block';
 }
