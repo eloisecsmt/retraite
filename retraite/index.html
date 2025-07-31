@@ -554,27 +554,22 @@
             <div class="form-section">
                 <h3>🎯 Stratégie de Comblement du Déficit</h3>
                 <p style="background: #e8f4fd; padding: 15px; border-radius: 8px; margin-bottom: 20px;">
-                    <strong>💡 Objectif :</strong> Utilisez l'argent récupéré des contrats pour combler le déficit mensuel identifié. 
-                    Les contrats sortis en rente sont prioritaires, les capitaux servent de complément ou de replacement.
+                    <strong>💡 Objectif :</strong> Analyser votre stratégie retraite en utilisant les rentes viagères pour sécuriser vos revenus 
+                    et en optimisant le placement des capitaux récupérés. Cette projection vous montre l'évolution de votre patrimoine 
+                    et la durabilité de votre stratégie.
                 </p>
                 
                 <!-- Récapitulatif des données précédentes -->
                 <div id="dataRecap" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 20px; margin-bottom: 30px;">
                     <div style="background: #ffebee; padding: 20px; border-radius: 10px; border-left: 5px solid #f44336;">
-                        <h5 style="color: #c62828; margin-bottom: 10px;">🎯 Déficit à Combler</h5>
+                        <h5 style="color: #c62828; margin-bottom: 10px;">🎯 Déficit Initial</h5>
                         <div id="deficitProjection" style="font-size: 1.3em; font-weight: bold; color: #d32f2f;">
                             Calculez d'abord votre déficit dans l'onglet "Situation Financière"
                         </div>
                     </div>
-                    <div style="background: #e8f5e8; padding: 20px; border-radius: 10px; border-left: 5px solid #4caf50;">
-                        <h5 style="color: #2e7d32; margin-bottom: 10px;">💰 Capital Disponible</h5>
-                        <div id="capitalProjection" style="font-size: 1.3em; font-weight: bold; color: #388e3c;">
-                            Simulez vos sorties dans l'onglet "Gestion des Sorties"
-                        </div>
-                    </div>
-                    <div style="background: #fff3e0; padding: 20px; border-radius: 10px; border-left: 5px solid #ff9800;">
-                        <h5 style="color: #f57c00; margin-bottom: 10px;">📈 Revenus de Rentes</h5>
-                        <div id="rentesProjection" style="font-size: 1.3em; font-weight: bold; color: #ef6c00;">
+                    <div style="background: #e3f2fd; padding: 20px; border-radius: 10px; border-left: 5px solid #2196f3;">
+                        <h5 style="color: #1565c0; margin-bottom: 10px;">📈 Revenus de Rentes</h5>
+                        <div id="rentesProjection" style="font-size: 1.3em; font-weight: bold; color: #1976d2;">
                             0 € / mois
                         </div>
                     </div>
@@ -584,6 +579,25 @@
                             0 € / mois
                         </div>
                     </div>
+                    <div style="background: #e8f5e8; padding: 20px; border-radius: 10px; border-left: 5px solid #4caf50;">
+                        <h5 style="color: #2e7d32; margin-bottom: 10px;">💰 Capital Disponible</h5>
+                        <div id="capitalProjection" style="font-size: 1.3em; font-weight: bold; color: #388e3c;">
+                            Simulez vos sorties dans l'onglet "Gestion des Sorties"
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Section Allocation Intelligente des Contrats -->
+                <div id="allocationOverview" style="display: none; margin-bottom: 30px;">
+                    <h4 style="color: #2c3e50; margin-bottom: 20px; text-align: center; font-size: 1.4em;">
+                        🎯 Allocation Intelligente des Contrats
+                    </h4>
+                    <div style="background: #f8f9fa; padding: 15px; border-radius: 8px; margin-bottom: 20px; text-align: center;">
+                        <p style="margin: 0; color: #495057; font-style: italic;">
+                            <strong>Stratégie hybride :</strong> Sécurisation par les rentes viagères + Optimisation du capital restant
+                        </p>
+                    </div>
+                    <div id="allocationGrid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 20px;"></div>
                 </div>
 
                 <!-- Configuration de la stratégie -->
@@ -591,25 +605,48 @@
                     <h4 style="color: #2c3e50; margin-bottom: 20px;">⚙️ Paramètres de Projection</h4>
                     <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px;">
                         <div class="form-group">
-                            <label for="rendementReplacement">Rendement contrats de replacement (%/an)</label>
+                            <label for="rendementReplacement">Rendement nouveaux placements (%/an)</label>
                             <input type="number" id="rendementReplacement" step="0.1" value="3.5" placeholder="3.5">
+                            <small style="color: #6c757d; margin-top: 5px; display: block;">
+                                Rendement des capitaux récupérés et replacés (fonds euros, SCPI, etc.)
+                            </small>
                         </div>
                         <div class="form-group">
                             <label for="inflationRate">Taux d'inflation (%/an)</label>
                             <input type="number" id="inflationRate" step="0.1" value="2.0" placeholder="2.0">
+                            <small style="color: #6c757d; margin-top: 5px; display: block;">
+                                Impact sur l'évolution des besoins et des revenus
+                            </small>
                         </div>
                         <div class="form-group">
                             <label for="ageEsperanceVie">Espérance de vie (années)</label>
                             <input type="number" id="ageEsperanceVie" value="85" placeholder="85">
+                            <small style="color: #6c757d; margin-top: 5px; display: block;">
+                                Pour calculer la durée de projection
+                            </small>
+                        </div>
+                        <div class="form-group">
+                            <label for="anneesObjectifCouverture">Objectif couverture (années)</label>
+                            <input type="number" id="anneesObjectifCouverture" value="20" placeholder="20">
+                            <small style="color: #6c757d; margin-top: 5px; display: block;">
+                                Années de déficit à couvrir par le capital
+                            </small>
                         </div>
                     </div>
                 </div>
 
-                <button class="calculate-btn" onclick="calculateProjection()">🚀 Calculer la Projection</button>
+                <!-- Bouton de calcul principal -->
+                <div style="text-align: center; margin-bottom: 30px;">
+                    <button class="calculate-btn" onclick="calculateProjection()" style="font-size: 1.2em; padding: 20px 40px;">
+                        🚀 Calculer la Projection Complète
+                    </button>
+                </div>
                 
                 <!-- Résultats de la projection -->
                 <div id="projectionResult" class="result-box">
-                    <h4>📊 Projection de Comblement du Déficit</h4>
+                    <h4 style="text-align: center; color: #2c3e50; margin-bottom: 25px; font-size: 1.3em;">
+                        📊 Projection de Comblement du Déficit
+                    </h4>
                     
                     <!-- Résumé de la stratégie -->
                     <div id="strategyOverview" style="margin-bottom: 25px;"></div>
@@ -617,12 +654,57 @@
                     <!-- Tableau de projection -->
                     <div id="projectionTable" style="margin-bottom: 25px;"></div>
                     
+                    <!-- Graphique (futur) -->
+                    <div id="projectionChart" style="display: none; margin-bottom: 25px;">
+                        <h5 style="color: #2c3e50; margin-bottom: 15px;">📈 Évolution Graphique</h5>
+                        <canvas id="projectionCanvas" width="800" height="400"></canvas>
+                    </div>
+                    
+                    <!-- Scénarios alternatifs -->
+                    <div id="alternativeScenarios" style="display: none; margin-bottom: 25px;">
+                        <h5 style="color: #2c3e50; margin-bottom: 15px;">🔄 Scénarios Alternatifs</h5>
+                        <div id="scenariosContent"></div>
+                    </div>
+                    
                     <!-- Recommandations -->
                     <div id="recommendations" style="margin-bottom: 25px;"></div>
+                    
+                    <!-- Actions concrètes -->
+                    <div id="actionPlan" style="margin-bottom: 25px;">
+                        <h5 style="color: #2c3e50; margin-bottom: 15px;">✅ Plan d'Action Recommandé</h5>
+                        <div id="actionPlanContent"></div>
+                    </div>
+                </div>
+
+                <!-- Section d'aide contextuelle -->
+                <div style="background: #e8f4fd; padding: 20px; border-radius: 10px; border-left: 5px solid #2196f3; margin-top: 30px;">
+                    <h5 style="color: #1565c0; margin-bottom: 15px;">💡 Aide à l'Interprétation</h5>
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px;">
+                        <div>
+                            <h6 style="color: #1976d2; margin-bottom: 8px;">📈 Rentes Viagères</h6>
+                            <p style="margin: 0; font-size: 0.9em; line-height: 1.4;">
+                                Revenus garantis à vie, indexés ou non selon le contrat. 
+                                Priorité absolue car sécurisent définitivement une partie du déficit.
+                            </p>
+                        </div>
+                        <div>
+                            <h6 style="color: #1976d2; margin-bottom: 8px;">💰 Capital Réinvesti</h6>
+                            <p style="margin: 0; font-size: 0.9em; line-height: 1.4;">
+                                Capital replacé sur nouveaux supports pour générer des revenus complémentaires 
+                                tout en préservant le patrimoine.
+                            </p>
+                        </div>
+                        <div>
+                            <h6 style="color: #1976d2; margin-bottom: 8px;">🎯 Capital Consommé</h6>
+                            <p style="margin: 0; font-size: 0.9em; line-height: 1.4;">
+                                Capital prélevé progressivement pour combler le déficit résiduel. 
+                                Durée limitée mais complète la stratégie.
+                            </p>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
-    </div>
 
     <script src="main.js"></script>
 </body>
